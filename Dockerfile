@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir poetry
 
 # Copie des fichiers de dépendances
-COPY pyproject.toml poetry.lock* ./
+COPY pyproject.toml poetry.lock* README.md ./
 
 # Installation des dépendances API uniquement (sans dev, bigdata, scraping, utils)
 RUN poetry config virtualenvs.create false \
