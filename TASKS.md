@@ -189,134 +189,32 @@
 
 ---
 
-## Phase 5 : Frontend React -- Single-page interactive [Semaines 5-7]
+## Phase 5 : Finalisation [Semaines 7-8]
 
-> **Architecture** : une page unique interactive centrée sur la carte (pas de multi-pages).
-> Navigation par viewLevel (national → region → departement → commune) via clic carte + recherche.
-
-### Setup et composants réutilisables (peuvent démarrer en parallèle de Phase 4)
-
-- [ ] **P5-0** `S` `P0` -- Init projet React avec Vite + TypeScript
-  - `npm create vite@latest frontend -- --template react-ts`
-  - Installer : react-map-gl, mapbox-gl, recharts, @tanstack/react-query, tailwindcss
-  - Config proxy Vite vers FastAPI (dev)
-  - **PAS de react-router-dom** (single-page interactive)
-- [ ] **P5-1** `M` `P0` -- `src/components/Layout.tsx`
-  - Navbar (logo, barre de recherche autocomplete, filtres), footer
-  - Structure responsive : carte à gauche, panneau latéral à droite
-- [ ] **P5-2** `L` `P0` -- `src/components/MapView.tsx`
-  - Carte choropleth (react-map-gl + Mapbox GL JS) -- coloration par indicateur via fill layers
-  - Carte bubble map -- cercles proportionnels via circle layers
-  - Gestion du zoom animé lors des transitions de viewLevel
-  - `onFeatureClick` → déclenche la navigation (navigateTo)
-  - Composant réutilisable paramétrable (indicateur, niveau géo, palette)
-- [ ] **P5-3** `L` `P0` -- `src/components/Charts.tsx`
-  - LineChart (tendances temporelles)
-  - BarChart (comparaisons, distributions)
-  - RadarChart (profil multi-critères)
-  - BoxPlot (distribution des prix via customisation Recharts)
-  - Tous via Recharts, paramétrables
-- [ ] **P5-4** `M` `P0` -- `src/components/SidePanel.tsx`
-  - Panneau latéral contextuel qui s'adapte au viewLevel :
-    - national → KPIs nationaux, top/flop, tendance
-    - region → KPIs régionaux, comparaison départements
-    - departement → classement communes, tendances départementales
-    - commune → fiche détaillée avec onglets (Prix, DPE, Équipements, Revenus, Criminalité, Avis)
-  - **Dépendance** : P5-3
-- [ ] **P5-5** `M` `P1` -- `src/components/Filters.tsx` + `Breadcrumb.tsx`
-  - Barre de filtres horizontale : indicateur choroplèthe, type de bien, période (slider)
-  - Breadcrumb cliquable (France > Région > Département > Commune)
-  - Gestion d'état via React Context (FilterProvider)
-- [ ] **P5-6** `S` `P1` -- `src/assets/` + Tailwind config
-  - Thème Tailwind custom (couleurs, typographie, espacements)
-  - Responsive design
-
-### Application et intégration
-
-- [ ] **P5-7** `M` `P0` -- `src/App.tsx` + Providers
-  - FilterProvider (filtres globaux : indicateur, type bien, période)
-  - MapNavigationProvider (viewLevel, selectedCode, zoom, breadcrumb)
-  - Layout global avec carte + panneau latéral
-  - **Dépendance** : P5-0, P5-1
-- [ ] **P5-8** `M` `P0` -- `src/hooks/useMapNavigation.ts`
-  - Context pour la navigation carte (viewLevel, selectedCode, parentCodes)
-  - Fonctions : navigateTo(level, code), goBack(), goToNational()
-  - Transitions animées (zoom) lors du changement de viewLevel
-  - **Dépendance** : P5-7
-- [ ] **P5-9** `M` `P0` -- `src/hooks/` + `src/api/`
-  - Custom hooks pour le data fetching (useCommune, usePrices, useStats, useGeo, useReviews)
-  - Client API centralisé (fetchApi, fetchGeoJson)
-  - useFilters (FilterProvider)
-  - **Dépendance** : P5-7
-- [ ] **P5-10** `L` `P0` -- Intégration viewLevel national + region
-  - Choroplèthe départements colorée par indicateur
-  - SidePanel national : KPIs, top/flop, tendance
-  - SidePanel region : comparaison départements, tendances
-  - Clic département → zoom + transition vers region/departement
-  - **Dépendance** : P4-5, P5-2, P5-3, P5-4, P5-8
-- [ ] **P5-11** `L` `P0` -- Intégration viewLevel departement
-  - Carte communes (bubble map ou choroplèthe)
-  - SidePanel : classement communes triable, tendances départementales
-  - Clic commune → zoom + transition vers commune
-  - **Dépendance** : P4-5, P5-2, P5-3, P5-4, P5-8
-- [ ] **P5-12** `XL` `P0` -- Intégration viewLevel commune (fiche détaillée)
-  - SidePanel avec onglets :
-    - Prix immobilier (historique + tendance + distribution)
-    - DPE (distribution des classes énergétiques)
-    - Équipements et services (nombre par catégorie)
-    - Revenus et emploi
-    - Criminalité
-    - Avis habitants (notes + word cloud basique)
-  - **Dépendance** : P4-2, P4-3, P4-4, P4-6, P5-3, P5-4, P5-8
-- [ ] **P5-13** `M` `P1` -- `src/components/WordCloud.tsx`
-  - Word cloud basique (fréquence de mots, pas de sentiment)
-  - Intégré dans l'onglet "Avis" du SidePanel commune
-  - **Dépendance** : P4-6, P5-12
-- [ ] **P5-14** `M` `P1` -- `src/views/TendancesView.tsx`
-  - Mode tendances (viewMode=tendances via navbar)
-  - Comparaison multi-communes : sélection 2-5 communes, LineChart multi-séries
-  - **Dépendance** : P5-3, P5-8, P5-9
-- [ ] **P5-15** `M` `P1` -- `src/views/ComparaisonView.tsx`
-  - Mode comparaison (viewMode=comparaison via navbar)
-  - Sélection 2-4 communes, RadarChart multi-critères, table side-by-side
-  - **Dépendance** : P5-3, P5-8, P5-9
-- [ ] **P5-16** `M` `P1` -- `src/views/EnergieView.tsx`
-  - Mode énergie (viewMode=energie via navbar)
-  - Carte heatmap DPE par département, distribution classes A-G, évolution temporelle
-  - **Dépendance** : P5-2, P5-3, P5-8
-- [ ] **P5-17** `M` `P1` -- `src/views/AvisView.tsx`
-  - Mode avis (viewMode=avis via navbar)
-  - Recherche commune, WordCloud, RadarChart 8 critères, choropleth note globale
-  - **Dépendance** : P5-8, P5-13
-
----
-
-## Phase 6 : Finalisation [Semaines 7-8]
-
-- [ ] **P6-1** `L` `P1` -- Tests unitaires
+- [ ] **P5-1** `L` `P1` -- Tests unitaires
   - Tests ingestion (download + parsing)
   - Tests processing (transformations PySpark)
   - Tests API (endpoints FastAPI)
   - **Dépendance** : Phases 1-4
-- [ ] **P6-2** `L` `P1` -- Tests d'intégration
-  - Pipeline complet : raw -> process -> load -> API -> frontend
+- [ ] **P5-2** `L` `P1` -- Tests d'intégration
+  - Pipeline complet : raw -> process -> load -> API
   - **Dépendance** : Tout
-- [ ] **P6-3** `M` `P1` -- Documentation méthodologie de nettoyage des données
+- [ ] **P5-3** `M` `P1` -- Documentation méthodologie de nettoyage des données
   - **Dépendance** : Phase 2
-- [ ] **P6-4** `M` `P1` -- Documentation schéma de base de données
+- [ ] **P5-4** `M` `P1` -- Documentation schéma de base de données
   - **Dépendance** : Phase 3
-- [ ] **P6-5** `S` `P2` -- Documentation traitement des avis
+- [ ] **P5-5** `S` `P2` -- Documentation traitement des avis
   - **Dépendance** : P2-4
-- [ ] **P6-6** `L` `P1` -- Optimisation des performances
+- [ ] **P5-6** `L` `P1` -- Optimisation des performances
   - Cache API (Redis ou in-memory)
   - Pagination API
   - Optimisation index SQL
-  - **Dépendance** : Phases 4-5
-- [ ] **P6-7** `M` `P0` -- Docker final : `docker-compose up` lance tout (DB + Spark + API + Frontend)
+  - **Dépendance** : Phase 4
+- [ ] **P5-7** `M` `P0` -- Docker final : `docker-compose up` lance tout (DB + Spark + API)
   - **Dépendance** : Tout
-- [ ] **P6-8** `M` `P2` -- `src/ingestion/update_all.py` : script de mise à jour incrémentale (`--since`)
+- [ ] **P5-8** `M` `P2` -- `src/ingestion/update_all.py` : script de mise à jour incrémentale (`--since`)
   - **Dépendance** : Phase 1
-- [ ] **P6-9** `M` `P2` -- `docs/architecture_scalabilite.md`
+- [ ] **P5-9** `M` `P2` -- `docs/architecture_scalabilite.md`
   - Architecture cible : Airflow DAGs, Kafka streaming
   - Schéma de scalabilité pour la soutenance
 
@@ -328,8 +226,6 @@
 - [ ] **B-2** `L` `P2` -- Déploiement en ligne (à définir)
 - [ ] **B-3** `L` `P2` -- Vue admin serveur (monitoring cluster Spark)
 - [ ] **B-4** `M` `P2` -- Mises à jour temps réel (scheduler APScheduler)
-- [ ] **B-5** `S` `P2` -- Visite guidée de l'application
-- [ ] **B-6** `XL` `P2` -- Extension à d'autres pays
 - [ ] **B-7** `XL` `P2` -- Pipeline NLP avancé sur les avis ville-ideale
   - spaCy `fr_core_news_md` : tokenisation, lemmatisation
   - Analyse de sentiment (positif/négatif) par commentaire (CamemBERT ou TextBlob-fr)
@@ -344,17 +240,17 @@
 Phase 0 (Setup)
   |
   v
-Phase 1 (Ingestion) --------+
-  |                          |
-  v                          v
-Phase 2 (Processing)    Phase 5 (Setup React + Composants : P5-0 a P5-6)
-  |                          |
-  v                          |
-Phase 3 (Loading)            |
-  |                          |
-  v                          v
-Phase 4 (API) ---------> Phase 5 (App + viewLevels : P5-7 a P5-13)
-  |                          |
-  v                          v
-Phase 6 (Finalisation + Tests + Docs)
+Phase 1 (Ingestion)
+  |
+  v
+Phase 2 (Processing)
+  |
+  v
+Phase 3 (Loading)
+  |
+  v
+Phase 4 (API)
+  |
+  v
+Phase 5 (Finalisation + Tests + Docs)
 ```
