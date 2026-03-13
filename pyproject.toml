@@ -21,17 +21,26 @@ psycopg2-binary = "^2.9"
 geoalchemy2 = "^0.15"
 asyncpg = "^0.30"
 
-# Big Data
+[tool.poetry.group.bigdata]
+optional = true
+
+[tool.poetry.group.bigdata.dependencies]
 pyspark = "^3.5"
 pandas = "^2.2"
 geopandas = "^1.0"
 
-# Scraping
+[tool.poetry.group.scraping]
+optional = true
+
+[tool.poetry.group.scraping.dependencies]
 scrapy = "^2.11"
 beautifulsoup4 = "^4.12"
 requests = "^2.32"
 
-# Utilitaires
+[tool.poetry.group.utils]
+optional = true
+
+[tool.poetry.group.utils.dependencies]
 wordcloud = "^1.9"
 
 [tool.poetry.group.dev.dependencies]
