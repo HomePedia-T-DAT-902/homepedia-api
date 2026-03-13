@@ -1,0 +1,43 @@
+# Données
+data/
+
+# Environnement
+.env
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+
+# Spark
+spark-warehouse/
+metastore_db/
+derby.log
+
+# Poetry
+poetry.lock
+
+# Tests
+.coverage
+htmlcov/
+.pytest_cache/

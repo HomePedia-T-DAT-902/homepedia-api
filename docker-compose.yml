@@ -1,0 +1,65 @@
+services:
+  # ── PostgreSQL + PostGIS ──
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-homepedia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homepedia_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-homepedia}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homepedia}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ── Spark Master ──
+  spark-master:
+    image: bitnami/spark:3.5
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+    ports:
+      - "7077:7077"
+      - "8080:8080"
+
+  # ── Spark Workers ──
+  spark-worker-1:
+    image: bitnami/spark:3.5
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+    depends_on:
+      - spark-master
+
+  spark-worker-2:
+    image: bitnami/spark:3.5
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+    depends_on:
+      - spark-master
+
+  # ── API FastAPI ──
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+      SPARK_MASTER_URL: spark://spark-master:7077
+    volumes:
+      - ./src:/app/src
+      - ./data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  pgdata:

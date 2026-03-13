@@ -9,18 +9,18 @@
 
 ## Phase 0 : Setup & Infrastructure
 
-- [ ] **P0-1** `S` `P0` -- Initialiser repo Git + `.gitignore` (data/, .env, __pycache__, .venv/, *.pyc, .DS_Store)
-- [ ] **P0-2** `S` `P0` -- Créer `pyproject.toml` (Poetry) avec toutes les dépendances backend
+- [x] **P0-1** `S` `P0` -- Initialiser repo Git + `.gitignore` (data/, .env, __pycache__, .venv/, *.pyc, .DS_Store)
+- [x] **P0-2** `S` `P0` -- Créer `pyproject.toml` (Poetry) avec toutes les dépendances backend
   - pyspark, fastapi, uvicorn
   - scrapy, beautifulsoup4, requests, pandas, geopandas
   - sqlalchemy, psycopg2-binary, geoalchemy2
   - wordcloud, python-dotenv
   - Frontend (npm) : react, react-map-gl, mapbox-gl, recharts, @tanstack/react-query, tailwindcss
-- [ ] **P0-3** `M` `P0` -- Créer `docker-compose.yml`
+- [x] **P0-3** `M` `P0` -- Créer `docker-compose.yml`
   - PostgreSQL 16 + PostGIS 3.4
   - Spark standalone : 1 master + 2 workers
   - Volumes persistants pour les données
-- [ ] **P0-4** `S` `P0` -- Créer `.env.example` avec variables de connexion DB
+- [x] **P0-4** `S` `P0` -- Créer `.env.example` avec variables de connexion DB
 - [ ] **P0-5** `L` `P0` -- Créer `src/database/postgres_schema.sql`
   - Tables de dimension : communes, departments, regions
   - Tables de faits : dvf_transactions, dpe_diagnostics, commune_statistics, commune_equipements, commune_criminalité
@@ -31,9 +31,9 @@
   - Index GiST sur colonnes geometry (géospatial)
   - Index GIN sur colonnes JSONB (documents flexibles)
   - Index tsvector pour recherche full-text français sur les avis
-- [ ] **P0-7** `M` `P1` -- Créer `Makefile` (targets: setup, ingest, process, load, api, frontend, update, all)
-- [ ] **P0-8** `S` `P1` -- Écrire `README.md` (installation, lancement, architecture)
-- [ ] **P0-9** `S` `P0` -- Créer l'arborescence des 2 repos : `homepedia-api` (src/ingestion, src/scraping, src/processing, src/database, src/api, data/raw, data/processed, tests) + `homepedia-front` (src/components, src/views, src/hooks, src/api, src/types, tests)
+- [x] **P0-7** `M` `P1` -- Créer `Makefile` (targets: setup, ingest, process, load, api, frontend, update, all)
+- [x] **P0-8** `S` `P1` -- Écrire `README.md` (installation, lancement, architecture)
+- [x] **P0-9** `S` `P0` -- Créer l'arborescence des 2 repos : `homepedia-api` (src/ingestion, src/scraping, src/processing, src/database, src/api, data/raw, data/processed, tests) + `homepedia-front` (src/components, src/views, src/hooks, src/api, src/types, tests)
 
 ---
 
