@@ -34,9 +34,6 @@ spark-warehouse/
 metastore_db/
 derby.log
 
-# Poetry
-poetry.lock
-
 # Tests
 .coverage
 htmlcov/

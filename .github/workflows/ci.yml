@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install --no-root --only main,dev
+
+      - name: Ruff check
+        run: poetry run ruff check src/
+
+      - name: Ruff format check
+        run: poetry run ruff format --check src/
+
+  # tests:
+  #   name: Tests
+  #   runs-on: ubuntu-latest
+  #   needs: lint
+  #   services:
+  #     postgres:
+  #       image: postgis/postgis:16-3.4
+  #       env:
+  #         POSTGRES_DB: homepedia_test
+  #         POSTGRES_USER: homepedia
+  #         POSTGRES_PASSWORD: test
+  #       ports:
+  #         - 5432:5432
+  #       options: >-
+  #         --health-cmd "pg_isready -U homepedia"
+  #         --health-interval 5s
+  #         --health-timeout 5s
+  #         --health-retries 5
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: "3.11"
+  #
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install poetry
+  #         poetry install --no-root
+  #
+  #     - name: Run tests
+  #       env:
+  #         DATABASE_URL: postgresql+asyncpg://homepedia:test@localhost:5432/homepedia_test
+  #       run: poetry run pytest tests/ -v --tb=short
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t homepedia-api:ci .
