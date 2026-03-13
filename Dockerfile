@@ -17,7 +17,7 @@ COPY pyproject.toml poetry.lock* README.md ./
 
 # Installation des dépendances API uniquement (sans dev, bigdata, scraping, utils)
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --only main
+    && poetry install --no-interaction --no-ansi --only main --no-root
 
 # Copie du code source
 COPY src/ ./src/
