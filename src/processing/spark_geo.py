@@ -1,23 +1,26 @@
 """
-Traitement PySpark des données géographiques de référence.
+Traitement PySpark des tables de référence géographique (communes, départements, régions).
+
+Ce script traite les ATTRIBUTS des entités administratives françaises :
+codes INSEE, noms, hiérarchie, population, superficie, densité, coordonnées.
+
+Il ne traite PAS les géométries PostGIS (contours GeoJSON) — celles-ci seront
+chargées directement depuis les GeoJSON Etalab dans load_geo.py via ST_GeomFromGeoJSON.
 
 Sources (data/raw/geo/) :
-  - communes-france-2025.csv      → attributs communes
-  - population-municipale.xlsx    → population 2023 (p23_pop)
-  - departements-5m.geojson       → attributs départements
-  - regions-5m.geojson            → attributs régions
+  - communes-france-2025.csv      → attributs communes (nom, codes, coords, superficie)
+  - population-municipale.xlsx    → population 2023 (p23_pop), source INSEE
+  - departements-5m.geojson       → attributs départements (properties uniquement, sans géométrie)
+  - regions-5m.geojson            → attributs régions (properties uniquement, sans géométrie)
 
 Sorties (data/processed/geo/) :
-  - communes/       → communes.parquet
-  - departements/   → departements.parquet
-  - regions/        → regions.parquet
-
-Note : les géométries (geom PostGIS) ne sont PAS dans les Parquet.
-Elles seront chargées depuis les GeoJSON directement lors du load DB.
+  - communes/       → 34 935 lignes
+  - departements/   → 109 lignes (métropole + DOM-TOM)
+  - regions/        → 26 lignes (métropole + DOM-TOM)
 
 Usage :
-    python -m src.processing.spark_geo
-    python -m src.processing.spark_geo --raw-dir data/raw/geo --out-dir data/processed/geo
+    docker-compose run --rm processing python -m src.processing.spark_geo
+    docker-compose run --rm processing python -m src.processing.spark_geo --raw-dir data/raw/geo --out-dir data/processed/geo
 """
 
 import argparse
