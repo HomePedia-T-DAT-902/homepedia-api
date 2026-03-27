@@ -41,22 +41,26 @@ logger = logging.getLogger(__name__)
 # Déclarer les schémas évite que Spark infère les types (plus lent + risque d'erreur
 # sur les codes INSEE qui commencent par 0, ex: "01001" lu comme entier 1001).
 
-COMMUNES_CSV_SCHEMA = StructType([
-    StructField("code_insee", StringType(), True),
-    StructField("nom_standard", StringType(), True),
-    StructField("dep_code", StringType(), True),
-    StructField("reg_code", StringType(), True),
-    StructField("code_postal", StringType(), True),
-    StructField("superficie_km2", DoubleType(), True),
-    StructField("densite", DoubleType(), True),          # sera recalculée
-    StructField("latitude_centre", DoubleType(), True),
-    StructField("longitude_centre", DoubleType(), True),
-])
+COMMUNES_CSV_SCHEMA = StructType(
+    [
+        StructField("code_insee", StringType(), True),
+        StructField("nom_standard", StringType(), True),
+        StructField("dep_code", StringType(), True),
+        StructField("reg_code", StringType(), True),
+        StructField("code_postal", StringType(), True),
+        StructField("superficie_km2", DoubleType(), True),
+        StructField("densite", DoubleType(), True),  # sera recalculée
+        StructField("latitude_centre", DoubleType(), True),
+        StructField("longitude_centre", DoubleType(), True),
+    ]
+)
 
-POPULATION_SCHEMA = StructType([
-    StructField("codgeo", StringType(), True),
-    StructField("p23_pop", DoubleType(), True),
-])
+POPULATION_SCHEMA = StructType(
+    [
+        StructField("codgeo", StringType(), True),
+        StructField("p23_pop", DoubleType(), True),
+    ]
+)
 
 
 def build_spark_session(app_name: str = "spark_geo") -> SparkSession:
@@ -66,17 +70,13 @@ def build_spark_session(app_name: str = "spark_geo") -> SparkSession:
     - En local (dev) : utilise tous les cores de la machine (local[*])
     """
     import os
+
     master = os.environ.get("SPARK_MASTER_URL", "local[*]")
-    return (
-        SparkSession.builder
-        .appName(app_name)
-        .master(master)
-        .config("spark.driver.memory", "2g")
-        .getOrCreate()
-    )
+    return SparkSession.builder.appName(app_name).master(master).config("spark.driver.memory", "2g").getOrCreate()
 
 
 # ── Lectures ──────────────────────────────────────────────────────────────────
+
 
 def read_communes_csv(spark: SparkSession, raw_dir: Path) -> DataFrame:
     """Lit le CSV attributs communes et sélectionne les colonnes utiles."""
@@ -84,8 +84,7 @@ def read_communes_csv(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"Lecture : {path}")
 
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "UTF-8")
         .option("sep", ",")
         # On laisse Spark inférer les types sauf pour les codes (StringType imposé via select)
@@ -121,7 +120,7 @@ def read_population_xlsx(spark: SparkSession, raw_dir: Path) -> DataFrame:
 
     # On garde uniquement les colonnes utiles
     pdf = pdf[["codgeo", "p23_pop"]].dropna(subset=["codgeo"])
-    pdf["codgeo"] = pdf["codgeo"].str.zfill(5)   # s'assure que le code est sur 5 chars
+    pdf["codgeo"] = pdf["codgeo"].str.zfill(5)  # s'assure que le code est sur 5 chars
     pdf["p23_pop"] = pd.to_numeric(pdf["p23_pop"], errors="coerce")
 
     # Conversion en Spark DataFrame
@@ -160,6 +159,7 @@ def read_geojson_properties(spark: SparkSession, path: Path) -> DataFrame:
 
 
 # ── Transformations ───────────────────────────────────────────────────────────
+
 
 def build_communes(
     communes_df: DataFrame,
@@ -210,6 +210,7 @@ def build_regions(geojson_df: DataFrame) -> DataFrame:
 
 # ── Écriture ──────────────────────────────────────────────────────────────────
 
+
 def write_parquet(df: DataFrame, out_dir: Path, name: str) -> None:
     """Écrit un DataFrame en Parquet (mode overwrite)."""
     dest = str(out_dir / name)
@@ -219,6 +220,7 @@ def write_parquet(df: DataFrame, out_dir: Path, name: str) -> None:
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Traitement PySpark des données géographiques.")

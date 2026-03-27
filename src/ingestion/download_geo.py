@@ -55,6 +55,7 @@ POPULATION_DEST = "population-municipale.xlsx"
 
 # ── Utilitaires ───────────────────────────────────────────────────────────────
 
+
 def download_file(url: str, dest: Path, chunk_size: int = 1024 * 1024) -> None:
     """Télécharge un fichier vers dest avec affichage de la progression."""
     logger.info(f"Téléchargement : {url}")
@@ -102,9 +103,9 @@ def get_datagouv_resource_url(dataset_id: str, format_hint: str = "xlsx") -> str
 
     # Filtrer par format et prendre la plus récente (dernière dans la liste)
     matching = [
-        res for res in resources
-        if format_hint.lower() in res.get("format", "").lower()
-        or format_hint.lower() in res.get("url", "").lower()
+        res
+        for res in resources
+        if format_hint.lower() in res.get("format", "").lower() or format_hint.lower() in res.get("url", "").lower()
     ]
     candidates = matching if matching else resources
     chosen = candidates[-1]  # la plus récente
@@ -115,6 +116,7 @@ def get_datagouv_resource_url(dataset_id: str, format_hint: str = "xlsx") -> str
 
 
 # ── Sources ───────────────────────────────────────────────────────────────────
+
 
 def download_contours(force: bool = False) -> None:
     """Contours administratifs Etalab (communes, depts, régions)."""
