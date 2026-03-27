@@ -28,6 +28,7 @@ optional = true
 pyspark = "^3.5"
 pandas = "^2.2"
 geopandas = "^1.0"
+openpyxl = "^3.1"
 
 [tool.poetry.group.scraping]
 optional = true
