@@ -27,8 +27,9 @@ import argparse
 import logging
 from pathlib import Path
 
+import json
 import pandas as pd
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, IntegerType, StringType, StructField, StructType
 
@@ -77,7 +78,7 @@ def build_spark_session(app_name: str = "spark_geo") -> SparkSession:
 
 # ── Lectures ──────────────────────────────────────────────────────────────────
 
-def read_communes_csv(spark: SparkSession, raw_dir: Path) -> "pyspark.sql.DataFrame":
+def read_communes_csv(spark: SparkSession, raw_dir: Path) -> DataFrame:
     """Lit le CSV attributs communes et sélectionne les colonnes utiles."""
     path = str(raw_dir / "communes-france-2025.csv")
     logger.info(f"Lecture : {path}")
@@ -107,7 +108,7 @@ def read_communes_csv(spark: SparkSession, raw_dir: Path) -> "pyspark.sql.DataFr
     return df
 
 
-def read_population_xlsx(spark: SparkSession, raw_dir: Path) -> "pyspark.sql.DataFrame":
+def read_population_xlsx(spark: SparkSession, raw_dir: Path) -> DataFrame:
     """
     Lit le fichier XLSX population via pandas puis convertit en Spark DataFrame.
     PySpark ne lit pas les XLSX nativement — pandas sert de pont.
@@ -130,7 +131,7 @@ def read_population_xlsx(spark: SparkSession, raw_dir: Path) -> "pyspark.sql.Dat
     return df
 
 
-def read_geojson_properties(spark: SparkSession, path: Path) -> "pyspark.sql.DataFrame":
+def read_geojson_properties(spark: SparkSession, path: Path) -> DataFrame:
     """
     Extrait uniquement les properties d'un GeoJSON FeatureCollection.
 
@@ -142,12 +143,10 @@ def read_geojson_properties(spark: SparkSession, path: Path) -> "pyspark.sql.Dat
     Structure GeoJSON :
         { "features": [ { "properties": {...}, "geometry": {...} }, ... ] }
     """
-    import json as json_lib
-
     logger.info(f"Lecture GeoJSON (properties uniquement) : {path}")
 
     with open(path, encoding="utf-8") as f:
-        features = json_lib.load(f)["features"]
+        features = json.load(f)["features"]
 
     # Extrait uniquement les properties — geometry ignorée
     props = [feature["properties"] for feature in features]
@@ -163,9 +162,9 @@ def read_geojson_properties(spark: SparkSession, path: Path) -> "pyspark.sql.Dat
 # ── Transformations ───────────────────────────────────────────────────────────
 
 def build_communes(
-    communes_df: "pyspark.sql.DataFrame",
-    population_df: "pyspark.sql.DataFrame",
-) -> "pyspark.sql.DataFrame":
+    communes_df: DataFrame,
+    population_df: DataFrame,
+) -> DataFrame:
     """
     Jointure communes + population, calcul de la densité.
 
@@ -192,7 +191,7 @@ def build_communes(
     return df
 
 
-def build_departements(geojson_df: "pyspark.sql.DataFrame") -> "pyspark.sql.DataFrame":
+def build_departements(geojson_df: DataFrame) -> DataFrame:
     """Extrait les attributs départements depuis le GeoJSON Etalab."""
     return geojson_df.select(
         F.col("code").alias("code_departement"),
@@ -201,7 +200,7 @@ def build_departements(geojson_df: "pyspark.sql.DataFrame") -> "pyspark.sql.Data
     )
 
 
-def build_regions(geojson_df: "pyspark.sql.DataFrame") -> "pyspark.sql.DataFrame":
+def build_regions(geojson_df: DataFrame) -> DataFrame:
     """Extrait les attributs régions depuis le GeoJSON Etalab."""
     return geojson_df.select(
         F.col("code").alias("code_region"),
@@ -211,7 +210,7 @@ def build_regions(geojson_df: "pyspark.sql.DataFrame") -> "pyspark.sql.DataFrame
 
 # ── Écriture ──────────────────────────────────────────────────────────────────
 
-def write_parquet(df: "pyspark.sql.DataFrame", out_dir: Path, name: str) -> None:
+def write_parquet(df: DataFrame, out_dir: Path, name: str) -> None:
     """Écrit un DataFrame en Parquet (mode overwrite)."""
     dest = str(out_dir / name)
     logger.info(f"Écriture Parquet : {dest}")
