@@ -80,6 +80,8 @@
 | P3-1  | postgres_loader.py — tables dimension + faits + price_trends | L      |
 | P6-1  | Tests unitaires ingestion + processing (sa partie)           | M      |
 
+Ajout cadastre
+
 **Charge estimée : ~10-11 jours**
 
 > Pipeline critique. Commence dès semaine 2.
