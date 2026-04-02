@@ -3,6 +3,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.routers import communes
+
 app = FastAPI(
     title="Homepedia API",
     description="API d'analyse du marché immobilier français",
@@ -16,6 +18,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(communes.router)
 
 
 @app.get("/health")

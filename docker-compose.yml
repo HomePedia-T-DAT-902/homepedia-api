@@ -10,6 +10,7 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./src/database/postgres_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-homepedia}"]
       interval: 5s
@@ -48,6 +49,10 @@ services:
       dockerfile: Dockerfile.processing
     environment:
       PYTHONUNBUFFERED: "1"
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-homepedia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-homepedia_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-homepedia}
       # SPARK_MASTER_URL non défini → local[*] (tous les cores du container)
       # Pour soumettre au cluster : docker-compose run -e SPARK_MASTER_URL=spark://spark-master:7077 processing ...
     volumes:
@@ -55,6 +60,7 @@ services:
       - ./data:/app/data
     depends_on:
       - spark-master
+      - db
 
   # ── API FastAPI ──
   api:
