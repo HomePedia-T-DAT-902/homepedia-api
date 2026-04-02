@@ -33,6 +33,7 @@ erDiagram
     communes ||--o{ rpls_logements : "1:N (~5M)"
     communes ||--|| city_reviews : "1:1 (JSONB)"
     communes ||--o{ listings : "1:N (JSONB)"
+    communes ||--o{ parcelles_cadastrales : "1:N (~70M)"
 
     regions {
         varchar code_region PK
@@ -62,6 +63,14 @@ erDiagram
         float valeur_fonciere
         float prix_m2 "calculé"
         geometry geom "PostGIS Point"
+    }
+    parcelles_cadastrales {
+        varchar id PK "ex: 75101000AB0002"
+        varchar code_commune FK
+        varchar section
+        varchar numero
+        integer contenance "m²"
+        geometry geom "PostGIS Polygon"
     }
     city_reviews {
         varchar code_commune PK
@@ -104,6 +113,27 @@ regions (
     geom GEOMETRY(MultiPolygon, 4326)    -- INDEX GIST
 );
 ```
+
+---
+
+## Cadastre (parcelles)
+
+```sql
+parcelles_cadastrales (
+    id VARCHAR(20) PRIMARY KEY,          -- ex: "75101000AB0002"
+    code_commune VARCHAR(5),             -- FK, INDEX
+    prefixe VARCHAR(3),
+    section VARCHAR(2),                  -- INDEX
+    numero VARCHAR(4),
+    contenance INTEGER,                  -- m²
+    created DATE,
+    updated DATE,
+    geom GEOMETRY(Polygon, 4326)         -- INDEX GIST
+);
+```
+
+> Source : [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr) (Etalab)
+> Volume : ~70M parcelles, GeoJSON par département
 
 ---
 
@@ -336,9 +366,10 @@ listings (
 
 | Type | Index | Usage |
 |------|-------|-------|
-| B-tree | `code_commune`, `date_mutation`, `type_local` | Jointures et filtres classiques |
-| GiST | `geom`, `geom_simplified` | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
+| B-tree | `code_commune`, `date_mutation`, `type_local`, `section` | Jointures et filtres classiques |
+| GiST | `geom`, `geom_simplified` (y compris parcelles cadastrales) | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
 | GIN | colonnes JSONB | Recherche dans les documents JSON (avis, annonces) |
+| GIN (trigram) | `communes.nom` | Recherche floue par nom (ILIKE + similarity) |
 
 ---
 

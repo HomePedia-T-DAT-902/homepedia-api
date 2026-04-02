@@ -9,6 +9,7 @@
 
 | Source | Catégorie | Priorité | Volume approx. | Colonnes | Clé de jointure | Description |
 |--------|-----------|----------|----------------|----------|-----------------|-------------|
+| Cadastre (parcelles) | Référentiel | P0 | ~70M parcelles | ✅ | `commune` (code INSEE) | Contours des parcelles cadastrales (section, numéro, contenance) |
 | DVF (Geo-DVF + brut) | Immobilier | P0 | ~25-30M lignes | ✅ | `code_commune` | Transactions immobilières (prix, surface, type, localisation) |
 | DPE (nouveau + ancien) | Énergie | P0 | ~9M + ~10.7M lignes | ✅ | `code_insee_ban` / `code_insee_commune` | Classes énergétiques A-G, consommation, émissions GES |
 | Carte des loyers (×4 fichiers) | Immobilier | P0 | ~35K lignes/fichier | ✅ | `INSEE_C` | Loyer prédit au m² par commune avec intervalle de confiance |
@@ -46,6 +47,7 @@
 
 | Source | Format | URL |
 |--------|--------|-----|
+| Cadastre (parcelles) | GeoJSON (gzip, par dept) | https://cadastre.data.gouv.fr/bundler/cadastre-etalab/departements/{dept}/geojson/parcelles |
 | DVF brut (DGFiP) | CSV (`\|`, Latin-1) | https://www.data.gouv.fr/datasets/demandes-de-valeurs-foncieres |
 | Geo-DVF (Etalab) | CSV (UTF-8) | https://files.data.gouv.fr/geo-dvf/latest/csv/ |
 | DPE nouveau (depuis juil. 2021) | CSV | https://www.data.gouv.fr/datasets/dpe-logements-existants-depuis-juillet-2021 |
