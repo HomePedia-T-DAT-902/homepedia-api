@@ -20,6 +20,28 @@
 
 ## 1. Données immobilières
 
+### Cadastre — Parcelles cadastrales · `P0` `✅`
+
+- **Source** : Etalab — Plan cadastral informatisé
+- **Contenu** : Contours géométriques des parcelles cadastrales (id, section, numéro, contenance en m²)
+- **Volume** : ~70M parcelles — **Format** : GeoJSON (gzip) par département — **MAJ** : continue
+- **Granularité** : parcelle (agrégeable par commune via `commune`)
+- **URL** : `https://cadastre.data.gouv.fr/bundler/cadastre-etalab/departements/{dept}/geojson/parcelles`
+- **Tâche** : ingestion + loading à implémenter
+- **Table BDD** : `parcelles_cadastrales`
+
+| Colonne | Type | Description |
+|---------|------|-------------|
+| `id` | string | Identifiant parcelle (ex: `75101000AB0002`) |
+| `commune` | string | Code commune INSEE (5 chars) — clé de jointure |
+| `prefixe` | string | Préfixe cadastral |
+| `section` | string | Section cadastrale (2 chars) |
+| `numero` | string | Numéro de parcelle |
+| `contenance` | int | Surface en m² |
+| `created` | date | Date de création |
+| `updated` | date | Date de dernière mise à jour |
+| geometry | Polygon | Contour de la parcelle (EPSG:4326) |
+
 ### DVF — Demandes de Valeurs Foncières · `P0` `✅`
 
 - **Source** : DGFiP — **Explorateur** : https://explore.data.gouv.fr/immobilier
