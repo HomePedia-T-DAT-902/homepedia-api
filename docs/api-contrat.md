@@ -34,6 +34,7 @@ const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 | `/api/v1/stats/{code_commune}` | GET | `CommuneStats` | 6h | — |
 | `/api/v1/geo/communes` | GET | `GeoJSON FeatureCollection` | 24h | `bbox` |
 | `/api/v1/geo/departments` | GET | `GeoJSON FeatureCollection` | 24h | — |
+| `/api/v1/geo/parcelles` | GET | `GeoJSON FeatureCollection` | 24h | `bbox` (requis), `limit` (max 10000) |
 | `/api/v1/geo/choropleth` | GET | `ChoroplethData` | 6h | `indicator`, `level` |
 | `/api/v1/reviews/{code_commune}` | GET | `ReviewSummary` | 6h | — |
 | `/api/v1/geo/transactions` | GET | `GeoJSON FeatureCollection` | 6h | `bbox`, `type`, `annee` |
