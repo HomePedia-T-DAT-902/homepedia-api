@@ -203,7 +203,7 @@ def load_all(depts_filter: list[str] | None, truncate: bool) -> None:
             return
 
         if depts_filter:
-            gz_files = [f for f in gz_files if any(f.stem == f"parcelles_{d}" for d in depts_filter)]
+            gz_files = [f for f in gz_files if any(f.name == f"parcelles_{d}.geojson.gz" for d in depts_filter)]
 
         logger.info(f"=== Chargement cadastre — {len(gz_files)} département(s) ===")
 
