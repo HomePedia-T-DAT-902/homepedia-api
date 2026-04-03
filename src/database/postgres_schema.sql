@@ -75,6 +75,19 @@ CREATE TABLE IF NOT EXISTS price_trends (
 );
 
 -- =============================================================================
+-- Tables de faits — DPE (Diagnostics de Performance Énergétique)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS dpe_diagnostics (
+    id SERIAL PRIMARY KEY,
+    code_commune VARCHAR(5) REFERENCES communes(code_commune),
+    date_diagnostic DATE,
+    classe_energie CHAR(1),
+    consommation_moyenne FLOAT,
+    source VARCHAR(10)
+);
+
+-- =============================================================================
 -- Cadastre — Parcelles cadastrales (contours Etalab)
 -- =============================================================================
 
@@ -91,6 +104,34 @@ CREATE TABLE IF NOT EXISTS parcelles_cadastrales (
 );
 
 -- =============================================================================
+-- BPE — Équipements par commune (agrégation spark_bpe.py)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS bpe_commune_stats (
+    code_commune      VARCHAR(5) PRIMARY KEY REFERENCES communes(code_commune),
+    nb_equipements_total INTEGER,
+    -- Grandes catégories (première lettre TYPEQU)
+    nb_a              INTEGER,  -- Enseignement
+    nb_b              INTEGER,  -- Sport / Culture
+    nb_c              INTEGER,  -- Commerce
+    nb_d              INTEGER,  -- Santé
+    nb_e              INTEGER,  -- Transport
+    nb_f              INTEGER,  -- Tourisme
+    -- Types clés pour l'immobilier
+    nb_maternelles    INTEGER,
+    nb_primaires      INTEGER,
+    nb_creches        INTEGER,
+    nb_colleges       INTEGER,
+    nb_lycees         INTEGER,
+    nb_medecins       INTEGER,
+    nb_pharmacies     INTEGER,
+    nb_urgences       INTEGER,
+    nb_supermarches   INTEGER,
+    nb_hypermarches   INTEGER,
+    nb_gares          INTEGER
+);
+
+-- =============================================================================
 -- Index
 -- =============================================================================
 
@@ -100,6 +141,11 @@ CREATE INDEX IF NOT EXISTS idx_communes_code_departement ON communes (code_depar
 CREATE INDEX IF NOT EXISTS idx_communes_code_region ON communes (code_region);
 CREATE INDEX IF NOT EXISTS idx_communes_code_postal ON communes (code_postal);
 CREATE INDEX IF NOT EXISTS idx_departements_code_region ON departements (code_region);
+
+-- B-tree DPE
+CREATE INDEX IF NOT EXISTS idx_dpe_code_commune ON dpe_diagnostics (code_commune);
+CREATE INDEX IF NOT EXISTS idx_dpe_classe_energie ON dpe_diagnostics (classe_energie);
+CREATE INDEX IF NOT EXISTS idx_dpe_date_diagnostic ON dpe_diagnostics (date_diagnostic);
 
 -- B-tree DVF (filtres fréquents)
 CREATE INDEX IF NOT EXISTS idx_dvf_code_commune ON dvf_transactions (code_commune);
