@@ -2,9 +2,13 @@
 Téléchargement de la BPE — Base Permanente des Équipements (P1-4).
 
 Source : INSEE via data.gouv.fr
-    https://www.data.gouv.fr/datasets/base-permanente-des-equipements-1
+    Dataset correct (Parquet) : https://www.data.gouv.fr/datasets/base-permanente-des-equipements-3
+    ID : 69ca8e301e273a3a7f32ee61
 
-Contenu : 1 fichier CSV (dernier millésime), ~2M lignes, séparateur `;`
+Note : l'ancien dataset "base-permanente-des-equipements-1" ne fournit qu'un lien vers
+une page web INSEE (pas un fichier direct). Le bon dataset fournit un Parquet (~200MB).
+Le Parquet est converti en CSV pour cohérence avec le reste du pipeline.
+
 Colonnes clés :
     - DEPCOM  → code_commune INSEE (5 chars, clé de jointure)
     - TYPEQU  → code type d'équipement (229 types : A101=maternelle, D201=médecin, E101=gare…)
@@ -29,9 +33,10 @@ logger = logging.getLogger(__name__)
 RAW_DIR = Path("data/raw/bpe")
 BPE_DEST = "bpe.csv"
 
-# Slug du dataset sur data.gouv.fr
-# Page : https://www.data.gouv.fr/datasets/base-permanente-des-equipements-1
-BPE_DATASET_ID = "base-permanente-des-equipements-1"
+# Dataset data.gouv.fr avec fichier Parquet direct (BPE24.parquet)
+# Page : https://www.data.gouv.fr/datasets/base-permanente-des-equipements-3
+BPE_DATASET_ID = "69ca8e301e273a3a7f32ee61"
+BPE_PARQUET_DEST = "bpe.parquet"
 
 
 # ── Utilitaires ───────────────────────────────────────────────────────────────
@@ -87,28 +92,25 @@ def get_bpe_resource_url() -> tuple[str, str]:
     if not resources:
         raise RuntimeError(f"Aucune ressource pour le dataset {BPE_DATASET_ID}")
 
-    # Chercher le fichier "ensemble" ou "france entière" (pas découpé par département)
-    # Le fichier s'appelle typiquement "BPE24.csv" ou "bpe_ensemble_YYYY.csv"
-    priority_keywords = ["ensemble", "france", "bpe2", "bpe_"]
-    for keyword in priority_keywords:
-        for res in resources:
-            title = res.get("title", "").lower()
-            url = res.get("url", "").lower()
-            fmt = res.get("format", "").lower()
-            if keyword in title or keyword in url:
-                if "csv" in fmt or "csv" in url or "gz" in url:
-                    logger.info(f"Ressource sélectionnée : {res.get('title')}  →  {res['url']}")
-                    return res["url"], res.get("title", "BPE")
-
-    # Fallback : première ressource CSV
+    # Chercher Parquet en priorité (le dataset fournit BPE24.parquet)
     for res in resources:
-        if "csv" in res.get("format", "").lower() or "csv" in res.get("url", "").lower():
-            logger.info(f"Ressource fallback : {res.get('title')}  →  {res['url']}")
+        fmt = res.get("format", "").lower()
+        url_lower = res.get("url", "").lower()
+        if "parquet" in fmt or "parquet" in url_lower:
+            logger.info(f"Ressource Parquet sélectionnée : {res.get('title')}  →  {res['url']}")
             return res["url"], res.get("title", "BPE")
 
-    # Dernier recours : première ressource disponible
+    # Fallback CSV
+    for res in resources:
+        fmt = res.get("format", "").lower()
+        url_lower = res.get("url", "").lower()
+        if "csv" in fmt or "csv" in url_lower or "gz" in url_lower:
+            logger.info(f"Ressource CSV fallback : {res.get('title')}  →  {res['url']}")
+            return res["url"], res.get("title", "BPE")
+
+    # Dernier recours : première ressource
     res = resources[0]
-    logger.warning(f"Aucun CSV trouvé, on prend la première ressource : {res.get('title')}")
+    logger.warning(f"Format inconnu, on prend la première ressource : {res.get('title')}")
     return res["url"], res.get("title", "BPE")
 
 
@@ -116,50 +118,64 @@ def get_bpe_resource_url() -> tuple[str, str]:
 
 
 def download_bpe(force: bool = False) -> None:
-    """Télécharge le fichier BPE (dernier millésime, toutes communes)."""
+    """Télécharge le fichier BPE (Parquet, dernier millésime, toutes communes)."""
     logger.info("=== BPE — Base Permanente des Équipements ===")
 
-    dest = RAW_DIR / BPE_DEST
-    if dest.exists() and not force:
+    parquet_dest = RAW_DIR / BPE_PARQUET_DEST
+    csv_dest = RAW_DIR / BPE_DEST
+
+    if csv_dest.exists() and not force:
         logger.info(f"Déjà présent, ignoré : {BPE_DEST}  (--force pour écraser)")
-        _log_summary(dest)
+        _log_summary(csv_dest)
         return
 
     url, title = get_bpe_resource_url()
     logger.info(f"Fichier : {title}")
 
-    if url.endswith(".gz"):
-        gz_dest = dest.with_suffix(".csv.gz")
+    if "parquet" in url.lower():
+        download_file(url, parquet_dest)
+        _convert_parquet_to_csv(parquet_dest, csv_dest)
+    elif url.endswith(".gz"):
+        gz_dest = csv_dest.with_suffix(".csv.gz")
         download_file(url, gz_dest)
-        decompress_gz(gz_dest, dest)
+        decompress_gz(gz_dest, csv_dest)
     else:
-        download_file(url, dest)
+        download_file(url, csv_dest)
 
-    _log_summary(dest)
+    _log_summary(csv_dest)
+
+
+def _convert_parquet_to_csv(parquet_path: Path, csv_dest: Path) -> None:
+    """Convertit le Parquet BPE en CSV pour cohérence avec le pipeline."""
+    try:
+        import pandas as pd
+
+        logger.info(f"Conversion Parquet → CSV : {parquet_path.name}")
+        df = pd.read_parquet(parquet_path)
+        df.to_csv(csv_dest, index=False, sep=";")
+        parquet_path.unlink()
+        logger.info(f"Converti : {len(df):,} lignes → {csv_dest.name}")
+    except ImportError:
+        # pandas non installé → garder le Parquet, spark peut le lire directement
+        logger.warning("pandas non disponible — Parquet conservé tel quel (Spark peut le lire).")
+        parquet_path.rename(csv_dest.with_suffix(".parquet"))
 
 
 def _log_summary(path: Path) -> None:
     """Affiche un résumé rapide du fichier téléchargé."""
     size_mb = path.stat().st_size / 1e6
-    # Compter les lignes sans tout charger en mémoire
     with open(path, "rb") as f:
         nb_lines = sum(1 for _ in f)
     logger.info(f"Résumé : {nb_lines - 1:,} équipements  |  {size_mb:.0f} MB")
-    logger.info(
-        "Rappel colonnes clés : DEPCOM (→ code_commune), TYPEQU (229 types d'équipements)"
-    )
-    logger.info(
-        "Rappel séparateur : `;`  |  Les agrégations par commune se font dans spark_aggregations.py"
-    )
+    logger.info("Rappel colonnes clés : DEPCOM (code_commune), TYPEQU (229 types)")
+    logger.info("Agrégation par commune dans spark_aggregations.py")
 
 
 # ── Entrée ────────────────────────────────────────────────────────────────────
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Téléchargement de la BPE — Base Permanente des Équipements (INSEE)."
-    )
+    parser = argparse.ArgumentParser(description="Téléchargement de la BPE — Base Permanente des Équipements (INSEE).")
     parser.add_argument(
         "--force",
         action="store_true",

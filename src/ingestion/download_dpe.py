@@ -1,14 +1,16 @@
 """
 Téléchargement des données DPE — Diagnostics de Performance Énergétique (P1-3).
 
-2 sources avec formats incompatibles :
-- DPE nouveau (post juillet 2021) : CSV via data.gouv.fr, ~9M lignes, UTF-8
-    Dataset : https://www.data.gouv.fr/fr/datasets/dpe-logements-existants-depuis-juillet-2021/
-- DPE ancien (pré-juillet 2021) : dump MySQL via data.gouv.fr, ~10.7M lignes
-    Dataset : https://www.data.gouv.fr/fr/datasets/dpe-logements-avant-juillet-2021/
-    → converti en CSV à la volée (parsing des INSERT INTO)
+Les DPE ne sont PAS téléchargeables en un seul fichier sur data.gouv.fr.
+Ils sont hébergés sur la plateforme ADEME data-fair, accessibles via une API paginée.
 
-Volume total : ~5-10 GB, ~20M lignes
+2 sources :
+- DPE nouveau (post-juillet 2021) : API ADEME, ~14M lignes, dataset meg-83tjwtg8dyz4vv7h1dqe
+- DPE ancien  (pré-juillet 2021)  : API ADEME, ~10.7M lignes, dataset dpe-france
+    Filtres obligatoires : dpe_vierge=0 ET est_efface=0
+
+Volume total : ~24M lignes — téléchargement paginé (10 000 lignes/requête)
+Note : le téléchargement est long (~2h pour le nouveau DPE). Lancer en fond ou sur un serveur.
 
 Usage :
     python -m src.ingestion.download_dpe                  # télécharge les deux sources
@@ -32,12 +34,18 @@ logger = logging.getLogger(__name__)
 
 RAW_DIR = Path("data/raw/dpe")
 
-# ── Dataset IDs data.gouv.fr ──────────────────────────────────────────────────
-# Page : https://www.data.gouv.fr/fr/datasets/dpe-logements-existants-depuis-juillet-2021/
-DPE_NOUVEAU_DATASET_ID = "63405a45a7849f43fff11bbb"
+# ── API ADEME data-fair ───────────────────────────────────────────────────────
+# Les DPE sont hébergés sur la plateforme ADEME (pas data.gouv.fr).
+ADEME_API_BASE = "https://data.ademe.fr/data-fair/api/v1/datasets"
+DPE_NOUVEAU_DATASET_ID = "meg-83tjwtg8dyz4vv7h1dqe"  # ~14M lignes post-2021
+DPE_ANCIEN_DATASET_ID = "dpe-france"  # ~10.7M lignes pré-2021
 
-# Page : https://www.data.gouv.fr/fr/datasets/dpe-logements-avant-juillet-2021/
-DPE_ANCIEN_DATASET_ID = "5ee0b67a-fe15-4724-b45b-41a5a7bfca1a"
+# Colonnes utiles seulement (le dataset en contient ~200)
+DPE_NOUVEAU_COLS = "code_insee_ban,date_etablissement_dpe,etiquette_dpe,conso_5_usages_par_m2_ef"
+DPE_ANCIEN_COLS = "code_insee_commune_actualise,date_etablissement_dpe,classe_consommation_energie,consommation_energie"
+
+# Taille de page (max autorisé par l'API ADEME)
+ADEME_PAGE_SIZE = 10_000
 
 # Noms de fichiers de sortie
 DPE_NOUVEAU_DEST = "dpe_nouveau.csv"
@@ -102,8 +110,7 @@ def get_datagouv_resource(dataset_id: str, format_hints: list[str]) -> tuple[str
         matching = [
             res
             for res in resources
-            if hint.lower() in res.get("format", "").lower()
-            or hint.lower() in res.get("url", "").lower()
+            if hint.lower() in res.get("format", "").lower() or hint.lower() in res.get("url", "").lower()
         ]
         if matching:
             chosen = matching[-1]
@@ -260,58 +267,105 @@ def _split_sql_values(values_str: str) -> list[str]:
 # ── Sources ───────────────────────────────────────────────────────────────────
 
 
+def _download_ademe_paginated(dataset_id: str, select_cols: str, dest: Path, filters: str = "") -> None:
+    """
+    Télécharge un dataset ADEME data-fair en mode paginé (cursor-based).
+    Écrit directement en CSV au fur et à mesure pour ne pas tout charger en mémoire.
+
+    L'API ADEME utilise un paramètre `after` (valeur du curseur de la dernière ligne)
+    pour la pagination : GET /lines?size=N&after=X&select=col1,col2
+    """
+    base_url = f"{ADEME_API_BASE}/{dataset_id}/lines"
+    params = {
+        "size": ADEME_PAGE_SIZE,
+        "select": select_cols,
+    }
+    if filters:
+        params["qs"] = filters
+
+    total_count = None
+    written = 0
+    after = None
+    header_written = False
+
+    with open(dest, "w", newline="", encoding="utf-8") as out_f:
+        writer = None
+
+        while True:
+            if after:
+                params["after"] = after
+
+            r = requests.get(base_url, params=params, timeout=60)
+            r.raise_for_status()
+            data = r.json()
+
+            if total_count is None:
+                total_count = data.get("total", "?")
+                logger.info(
+                    f"  Total ADEME : {total_count:,} lignes"
+                    if isinstance(total_count, int)
+                    else f"  Total : {total_count}"
+                )
+
+            results = data.get("results", [])
+            if not results:
+                break
+
+            # Écrire l'en-tête au premier batch
+            if not header_written:
+                writer = csv.DictWriter(out_f, fieldnames=list(results[0].keys()))
+                writer.writeheader()
+                header_written = True
+
+            writer.writerows(results)
+            written += len(results)
+
+            # Curseur pour la page suivante
+            # data["next"] est une URL complète — extraire le paramètre "after"
+            import urllib.parse
+
+            next_url = data.get("next")
+            if next_url:
+                qs = urllib.parse.urlparse(next_url).query
+                after = urllib.parse.parse_qs(qs).get("after", [None])[0]
+            else:
+                after = None
+
+            if written % 500_000 < ADEME_PAGE_SIZE:
+                pct = f" ({written / total_count * 100:.0f}%)" if isinstance(total_count, int) and total_count else ""
+                logger.info(f"  → {written:,} lignes écrites{pct}")
+
+            if not after:
+                break
+
+    logger.info(f"  Terminé : {written:,} lignes → {dest}  ({dest.stat().st_size / 1e6:.0f} MB)")
+
+
 def download_dpe_nouveau(force: bool = False) -> None:
-    """DPE post-juillet 2021 — CSV UTF-8 depuis data.gouv.fr."""
-    logger.info("=== [1/2] DPE nouveau (post-juillet 2021) ===")
+    """DPE post-juillet 2021 — API ADEME paginée (~14M lignes)."""
+    logger.info("=== [1/2] DPE nouveau (post-juillet 2021) — API ADEME ===")
 
     dest = RAW_DIR / DPE_NOUVEAU_DEST
     if dest.exists() and not force:
         logger.info(f"Déjà présent, ignoré : {DPE_NOUVEAU_DEST}  (--force pour écraser)")
         return
 
-    url, title = get_datagouv_resource(DPE_NOUVEAU_DATASET_ID, ["csv", "gz"])
-    logger.info(f"Ressource : {title}")
-
-    if url.endswith(".gz"):
-        gz_dest = dest.with_suffix(".csv.gz")
-        download_file(url, gz_dest)
-        decompress_gz(gz_dest, dest)
-    else:
-        download_file(url, dest)
+    logger.info(f"  Dataset ADEME : {DPE_NOUVEAU_DATASET_ID}")
+    logger.info("  Note : ~14M lignes, téléchargement long (~1-2h selon débit).")
+    _download_ademe_paginated(DPE_NOUVEAU_DATASET_ID, DPE_NOUVEAU_COLS, dest)
 
 
 def download_dpe_ancien(force: bool = False) -> None:
-    """DPE pré-juillet 2021 — dump MySQL, converti en CSV."""
-    logger.info("=== [2/2] DPE ancien (pré-juillet 2021) ===")
+    """DPE pré-juillet 2021 — API ADEME paginée (~10.7M lignes, filtre vierge/effacé)."""
+    logger.info("=== [2/2] DPE ancien (pré-juillet 2021) — API ADEME ===")
 
-    csv_dest = RAW_DIR / DPE_ANCIEN_DEST
-    if csv_dest.exists() and not force:
+    dest = RAW_DIR / DPE_ANCIEN_DEST
+    if dest.exists() and not force:
         logger.info(f"Déjà présent, ignoré : {DPE_ANCIEN_DEST}  (--force pour écraser)")
         return
 
-    sql_gz_dest = RAW_DIR / DPE_ANCIEN_SQL_DEST
-
-    # Télécharger le dump (si pas déjà là)
-    if not sql_gz_dest.exists() or force:
-        url, title = get_datagouv_resource(DPE_ANCIEN_DATASET_ID, ["sql", "gz", "csv"])
-        logger.info(f"Ressource : {title}")
-        download_file(url, sql_gz_dest)
-    else:
-        logger.info(f"Dump déjà présent : {sql_gz_dest.name}")
-
-    # Détecter si c'est vraiment un dump SQL ou un CSV directement
-    if _is_sql_dump(sql_gz_dest):
-        convert_sql_dump_to_csv(sql_gz_dest, csv_dest, encoding="latin-1")
-    else:
-        # Certaines versions du dataset sont déjà en CSV (avec encoding latin-1)
-        logger.info("Le fichier semble être un CSV, décompression directe.")
-        decompress_gz(sql_gz_dest, csv_dest)
-        logger.info("Note : ce CSV est probablement encodé en Latin-1. spark_dpe.py gère ça.")
-
-    # Supprimer le dump une fois converti pour libérer de l'espace
-    if sql_gz_dest.exists():
-        sql_gz_dest.unlink()
-        logger.info(f"Dump supprimé (converti avec succès) : {sql_gz_dest.name}")
+    logger.info(f"  Dataset ADEME : {DPE_ANCIEN_DATASET_ID}")
+    _download_ademe_paginated(DPE_ANCIEN_DATASET_ID, DPE_ANCIEN_COLS, dest)
 
 
 def _is_sql_dump(path: Path) -> bool:
