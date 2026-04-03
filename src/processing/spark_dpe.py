@@ -29,12 +29,13 @@ Usage :
 
 import argparse
 import logging
-import os
 from pathlib import Path
 
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import DateType, DoubleType, IntegerType, StringType, StructField, StructType
+from pyspark.sql.types import DoubleType
+
+from src.processing.spark_utils import build_local_friendly_spark_session
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -72,15 +73,7 @@ COMMUNE_STATS_OUTPUT_COLS = [
 
 
 def build_spark_session(app_name: str = "spark_dpe") -> SparkSession:
-    master = os.environ.get("SPARK_MASTER_URL", "local[*]")
-    return (
-        SparkSession.builder
-        .appName(app_name)
-        .master(master)
-        .config("spark.driver.memory", "4g")
-        .config("spark.sql.shuffle.partitions", "200")
-        .getOrCreate()
-    )
+    return build_local_friendly_spark_session(app_name, driver_memory="4g", shuffle_partitions="200")
 
 
 # ── Lecture ───────────────────────────────────────────────────────────────────
@@ -138,11 +131,6 @@ def _find_conso_column_nouveau(df: DataFrame) -> str:
     Le dataset ADEME a parfois un espace dans le nom : "conso_5 usages_par_m2_ef"
     ou "conso_5_usages_par_m2_ef" selon la version exportée.
     """
-    candidates = [
-        "conso_5 usages_par_m2_ef",   # nom original avec espace
-        "conso_5_usages_par_m2_ef",   # variante sans espace
-        "`conso_5 usages_par_m2_ef`", # avec backtick Spark
-    ]
     for col in df.columns:
         if "conso_5" in col.lower() and "par_m2_ef" in col.lower():
             logger.info(f"[DPE nouveau] Colonne consommation trouvée : '{col}'")

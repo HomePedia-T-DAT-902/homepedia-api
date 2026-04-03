@@ -29,20 +29,19 @@ Usage :
 
 import argparse
 import logging
-import os
 from pathlib import Path
 
-from pyspark.sql import DataFrame, SparkSession, Window
+from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import (
-    DateType,
     DoubleType,
     IntegerType,
-    LongType,
     StringType,
     StructField,
     StructType,
 )
+
+from src.processing.spark_utils import build_local_friendly_spark_session
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -81,15 +80,7 @@ OUTPUT_COLS = [
 
 
 def build_spark_session(app_name: str = "spark_dvf") -> SparkSession:
-    master = os.environ.get("SPARK_MASTER_URL", "local[*]")
-    return (
-        SparkSession.builder
-        .appName(app_name)
-        .master(master)
-        .config("spark.driver.memory", "4g")
-        .config("spark.sql.shuffle.partitions", "200")
-        .getOrCreate()
-    )
+    return build_local_friendly_spark_session(app_name, driver_memory="4g", shuffle_partitions="200")
 
 
 # ── Schémas explicites ────────────────────────────────────────────────────────
@@ -304,9 +295,6 @@ def deduplicate_mutations(df: DataFrame) -> DataFrame:
     # ── Geo-DVF : déduplication par id_mutation ───────────────────────────────
     geo = df.filter(F.col("source") == "geo")
     dgfip = df.filter(F.col("source") == "dgfip")
-
-    # Pour Geo-DVF : window sur id_mutation pour garder la première ligne non-null
-    w = Window.partitionBy("id_mutation").orderBy(F.col("surface_reelle_bati").desc_nulls_last())
 
     geo_agg = (
         geo.groupBy("id_mutation")

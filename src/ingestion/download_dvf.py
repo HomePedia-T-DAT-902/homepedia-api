@@ -21,6 +21,7 @@ import argparse
 import gzip
 import logging
 import shutil
+import zipfile
 from datetime import date
 from pathlib import Path
 
@@ -35,9 +36,12 @@ RAW_DIR = Path("data/raw/dvf")
 GEO_DVF_BASE = "https://files.data.gouv.fr/geo-dvf/latest/csv"
 GEO_DVF_YEARS = list(range(2020, 2025))  # mettre à jour quand 2025 est publié
 
-# ── DVF brut DGFiP (2014-2019, CSV Latin-1, séparateur |) ────────────────────
+# ── DVF brut DGFiP (2020-2025, txt.zip Latin-1, séparateur |) ───────────────
+# NOTE : les données pré-2020 ne sont plus disponibles sur data.gouv.fr.
+# Le dataset DGFiP couvre désormais 2020-2025 (chevauchement avec Geo-DVF).
+# On ne télécharge que les années absentes de Geo-DVF (ex: 2025 S1).
 DGFIP_DATASET_ID = "5c4ae55a634f4117716d5656"
-DGFIP_YEARS = list(range(2014, 2020))
+DGFIP_YEARS = list(range(2020, 2026))  # sera filtré selon GEO_DVF_YEARS
 
 
 # ── Utilitaires ───────────────────────────────────────────────────────────────
@@ -81,7 +85,8 @@ def decompress_gz(gz_path: Path, dest_path: Path) -> None:
 def get_dgfip_year_url(year: int) -> str:
     """
     Récupère l'URL du fichier DVF DGFiP pour une année donnée via l'API data.gouv.fr.
-    Les ressources sont nommées "Demandes de valeurs foncières {year}" ou similaire.
+    Les ressources sont nommées "Valeurs foncières {year}" dans le TITRE (pas dans l'URL).
+    Format : .txt.zip (archive zip contenant un .txt séparé par |, encodage Latin-1).
     """
     api_url = f"https://www.data.gouv.fr/api/1/datasets/{DGFIP_DATASET_ID}/"
     logger.info(f"API data.gouv.fr — dataset DVF DGFiP : {api_url}")
@@ -92,18 +97,49 @@ def get_dgfip_year_url(year: int) -> str:
     if not resources:
         raise RuntimeError(f"Aucune ressource trouvée pour le dataset {DGFIP_DATASET_ID}")
 
-    # Chercher la ressource contenant l'année dans le titre ou l'URL
+    # L'année est dans le TITRE (ex: "Valeurs foncières 2024"), pas dans l'URL
+    # On prend la ressource txt.zip dont le titre contient l'année
+    matches = []
     for res in resources:
         title = res.get("title", "")
-        url = res.get("url", "")
-        if str(year) in title or str(year) in url:
-            logger.info(f"  Ressource {year} trouvée : {title}  →  {url}")
-            return url
+        fmt = res.get("format", "")
+        if str(year) in title and "txt" in fmt.lower():
+            matches.append(res)
 
-    raise RuntimeError(
-        f"Aucune ressource DVF DGFiP pour l'année {year}. "
-        f"Vérifier manuellement sur data.gouv.fr/fr/datasets/{DGFIP_DATASET_ID}"
-    )
+    if not matches:
+        # Fallback : chercher juste l'année dans le titre (sans filtrer par format)
+        matches = [res for res in resources if str(year) in res.get("title", "")]
+
+    if not matches:
+        raise RuntimeError(
+            f"Aucune ressource DVF DGFiP pour l'année {year}. "
+            f"Disponible : {[r.get('title') for r in resources if 'pdf' not in r.get('format','').lower()]}"
+        )
+
+    # Si plusieurs (ex: "2020 - Second semestre"), prendre l'année complète en priorité
+    full_year = [m for m in matches if str(year) in m.get("title", "") and "semestre" not in m.get("title", "").lower()]
+    chosen = full_year[0] if full_year else matches[0]
+    logger.info(f"  Ressource {year} trouvée : {chosen.get('title')}  →  {chosen['url']}")
+    return chosen["url"]
+
+
+def extract_txt_from_zip(zip_path: Path, dest_csv: Path) -> None:
+    """
+    Extrait le fichier .txt d'une archive .zip DGFiP et le renomme en .csv.
+    Le .txt est en Latin-1 avec séparateur | — on le copie tel quel (spark_dvf le gère).
+    Supprime le zip après extraction.
+    """
+    logger.info(f"Extraction zip : {zip_path.name}")
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        txt_files = [f for f in zf.namelist() if f.endswith(".txt")]
+        if not txt_files:
+            raise RuntimeError(f"Aucun fichier .txt dans {zip_path.name}")
+        txt_name = txt_files[0]
+        logger.info(f"  Fichier extrait : {txt_name} → {dest_csv.name}")
+        with zf.open(txt_name) as src, open(dest_csv, "wb") as dst:
+            shutil.copyfileobj(src, dst)
+    zip_path.unlink()
+    logger.info(f"Extrait : {dest_csv}  ({dest_csv.stat().st_size / 1e6:.0f} MB)")
 
 
 def year_from_since(since: str | None) -> int:
@@ -143,12 +179,17 @@ def download_geo_dvf(since_year: int = 0, force: bool = False) -> None:
 
 
 def download_dgfip_dvf(since_year: int = 0, force: bool = False) -> None:
-    """DVF brut DGFiP (2014-2019, CSV Latin-1, séparateur |)."""
-    logger.info("=== [2/2] DVF brut DGFiP (2014-2019) ===")
+    """
+    DVF brut DGFiP (format txt.zip, Latin-1, séparateur |).
+    Ne télécharge que les années absentes de Geo-DVF (pour éviter les doublons).
+    """
+    # Les années déjà couvertes par Geo-DVF sont inutiles en DGFiP
+    dgfip_only_years = [y for y in DGFIP_YEARS if y not in GEO_DVF_YEARS]
+    years = [y for y in dgfip_only_years if y >= since_year]
 
-    years = [y for y in DGFIP_YEARS if y >= since_year]
+    logger.info(f"=== [2/2] DVF brut DGFiP — années hors Geo-DVF : {years or 'aucune'} ===")
     if not years:
-        logger.info("Aucune année DVF DGFiP à télécharger selon --since.")
+        logger.info("  Toutes les années DGFiP sont déjà couvertes par Geo-DVF. Rien à télécharger.")
         return
 
     for year in years:
@@ -163,8 +204,17 @@ def download_dgfip_dvf(since_year: int = 0, force: bool = False) -> None:
             logger.warning(f"  {year} — URL introuvable : {e}")
             continue
 
-        # Les fichiers DGFiP sont parfois déjà décompressés, parfois en .gz
-        if url.endswith(".gz"):
+        # Format DGFiP : .txt.zip (zip contenant un .txt)
+        if url.endswith(".zip"):
+            zip_dest = dest.with_suffix(".txt.zip")
+            try:
+                download_file(url, zip_dest)
+                extract_txt_from_zip(zip_dest, dest)
+            except (requests.HTTPError, RuntimeError) as e:
+                logger.warning(f"  {year} — échec ({e}), ignoré.")
+                if zip_dest.exists():
+                    zip_dest.unlink()
+        elif url.endswith(".gz"):
             gz_dest = dest.with_suffix(".csv.gz")
             try:
                 download_file(url, gz_dest)
