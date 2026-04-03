@@ -29,7 +29,7 @@ def _build_feature(row) -> dict:
 @router.get("/parcelles")
 async def get_parcelles(
     bbox: str = Query(..., description="Bounding box: min_lon,min_lat,max_lon,max_lat"),
-    limit: int = Query(5000, ge=1, le=10000),
+    limit: int = Query(5000, ge=1, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Retourne les parcelles cadastrales dans une bounding box en GeoJSON."""
@@ -99,7 +99,7 @@ async def get_parcelle(
 @router.get("/communes/{code_commune}/parcelles")
 async def get_parcelles_by_commune(
     code_commune: str,
-    limit: int = Query(5000, ge=1, le=10000),
+    limit: int = Query(5000, ge=1, le=50000),
     db: AsyncSession = Depends(get_db),
 ):
     """Retourne toutes les parcelles cadastrales d'une commune en GeoJSON."""
