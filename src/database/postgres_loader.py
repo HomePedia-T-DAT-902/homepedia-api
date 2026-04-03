@@ -265,6 +265,84 @@ def load_communes(conn, processed_dir: Path, raw_dir: Path) -> None:
     conn.commit()
     logger.info(f"  → {loaded} communes chargées, {skipped} ignorées (pas de géométrie)")
 
+    # Charger les arrondissements municipaux (Paris, Lyon, Marseille)
+    # Ils sont dans le GeoJSON mais pas dans le CSV communes.
+    # Le cadastre et d'autres sources les utilisent comme code_commune.
+    _load_arrondissements(conn, raw_dir)
+
+
+def _load_arrondissements(conn, raw_dir: Path) -> None:
+    """
+    Charge les arrondissements municipaux de Paris (75101-75120),
+    Lyon (69381-69389) et Marseille (13201-13216) dans la table communes.
+
+    Source : GeoJSON Etalab communes-5m.geojson (propriétés code, nom, departement, region).
+    """
+    logger.info("=== Chargement arrondissements (Paris, Lyon, Marseille) ===")
+
+    geojson_path = raw_dir / "communes-5m.geojson"
+    geojson_50m_path = raw_dir / "communes-50m.geojson"
+
+    with open(geojson_path, encoding="utf-8") as f:
+        data_5m = json.load(f)
+    with open(geojson_50m_path, encoding="utf-8") as f:
+        data_50m = json.load(f)
+
+    # Index des géométries 50m par code
+    geoms_50m = {}
+    for feat in data_50m["features"]:
+        code = feat["properties"]["code"]
+        geom = feat["geometry"]
+        if geom["type"] == "Polygon":
+            geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
+        geoms_50m[code] = json.dumps(geom)
+
+    # Préfixes des arrondissements
+    arrond_prefixes = ("751", "6938", "132")
+    loaded = 0
+
+    with conn.cursor() as cur:
+        for feat in data_5m["features"]:
+            props = feat["properties"]
+            code = props["code"]
+
+            if not any(code.startswith(p) for p in arrond_prefixes):
+                continue
+
+            geom = feat["geometry"]
+            if geom["type"] == "Polygon":
+                geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
+            geom_json = json.dumps(geom)
+            geom_50m_json = geoms_50m.get(code)
+
+            code_dept = props.get("departement", code[:2])
+            code_region = props.get("region")
+
+            cur.execute(
+                """
+                INSERT INTO communes (
+                    code_commune, nom, code_departement, code_region,
+                    geom, geom_simplified
+                )
+                VALUES (
+                    %s, %s, %s, %s,
+                    ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326),
+                    ST_SetSRID(ST_GeomFromGeoJSON(%s), 4326)
+                )
+                ON CONFLICT (code_commune) DO UPDATE SET
+                    nom = EXCLUDED.nom,
+                    code_departement = EXCLUDED.code_departement,
+                    code_region = EXCLUDED.code_region,
+                    geom = EXCLUDED.geom,
+                    geom_simplified = EXCLUDED.geom_simplified
+                """,
+                (code, props["nom"], code_dept, code_region, geom_json, geom_50m_json),
+            )
+            loaded += 1
+
+    conn.commit()
+    logger.info(f"  → {loaded} arrondissements chargés (Paris: 20, Lyon: 9, Marseille: 16)")
+
 
 # ── DVF ──────────────────────────────────────────────────────────────────────
 
