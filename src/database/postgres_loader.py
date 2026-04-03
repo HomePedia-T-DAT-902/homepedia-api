@@ -36,12 +36,12 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-load_dotenv()
-
 import numpy as np
 import pandas as pd
 import psycopg2
 from psycopg2.extras import execute_values
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -324,7 +324,7 @@ def load_dvf_transactions(conn, processed_dir: Path, batch_size: int = 100_000) 
             WHERE longitude IS NOT NULL AND latitude IS NOT NULL
         """)
     conn.commit()
-    logger.info(f"  → Géométries mises à jour")
+    logger.info("  → Géométries mises à jour")
     logger.info(f"  → {total:,} transactions DVF chargées")
 
 
