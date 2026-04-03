@@ -84,12 +84,14 @@ erDiagram
 
 ## Tables de dimension (COG)
 
+> **Arrondissements municipaux** : Paris (75101-75120), Lyon (69381-69389) et Marseille (13201-13216) sont insérés dans la table `communes` au même titre que les communes. Ils ont leur propre `code_commune`, géométrie et nom. Le cadastre et d'autres sources (DVF, DPE) utilisent ces codes d'arrondissement, pas le code commune global (75056, 69123, 13055).
+
 ```sql
 communes (
     code_commune VARCHAR(5) PRIMARY KEY,
     nom VARCHAR(255),
     code_departement VARCHAR(3),
-    code_region VARCHAR(2),
+    code_region VARCHAR(3),
     code_postal VARCHAR(5),
     population INTEGER,
     superficie FLOAT,                     -- km²
@@ -103,12 +105,12 @@ communes (
 departements (
     code_departement VARCHAR(3) PRIMARY KEY,
     nom VARCHAR(255),
-    code_region VARCHAR(2),
+    code_region VARCHAR(3),
     geom GEOMETRY(MultiPolygon, 4326)    -- INDEX GIST
 );
 
 regions (
-    code_region VARCHAR(2) PRIMARY KEY,
+    code_region VARCHAR(3) PRIMARY KEY,
     nom VARCHAR(255),
     geom GEOMETRY(MultiPolygon, 4326)    -- INDEX GIST
 );

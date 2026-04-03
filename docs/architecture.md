@@ -200,6 +200,7 @@ tsconfig.json
 | **Impôts** | `download_rei.py` | `spark_aggregations.py` (PySpark) | `commune_impots` | `/stats/{code}` (fiscalité) | Commune |
 | **COG** | `download_geo.py` | chargement direct | `communes`, `departements`, `regions` | `/communes/*` | Toutes |
 | **Contours GeoJSON** | `download_geo.py` | ST_GeomFromGeoJSON | `*.geom` (PostGIS) | `/geo/*` | Cartes |
+| **Cadastre (parcelles)** | `download_cadastre.py` | `load_cadastre.py` (direct) | `parcelles_cadastrales` | `/geo/parcelles?bbox=` | Commune |
 | **Carte des loyers** | `download_loyers.py` | `spark_aggregations.py` (PySpark) | `commune_loyers` | `/stats/{code}` (loyers) | Commune |
 | **LOVAC** | `download_lovac.py` | `spark_aggregations.py` (PySpark) | `commune_logements_vacants` | `/stats/{code}` (vacance) | Commune |
 | **Zonage ABC** | `download_zonage.py` | chargement direct | `commune_zonage_abc` | `/stats/{code}` (zonage) | Commune |
