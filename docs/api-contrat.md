@@ -215,6 +215,53 @@ class ChoroplethData(BaseModel):
     geojson: dict[str, Any]
 ```
 
+### Parcelles cadastrales
+
+**`GET /api/v1/geo/parcelles`** — retourne un `GeoJSON FeatureCollection`
+
+**Params** :
+- `bbox` (requis) : `min_lon,min_lat,max_lon,max_lat` — bounding box du viewport
+- `limit` (optionnel, défaut 5000, max 10000) — nombre max de parcelles
+
+**Response** : `GeoJSON FeatureCollection` avec les propriétés suivantes par feature :
+
+```python
+class ParcelleProperties(BaseModel):
+    id: str                    # "75101000AB0002" — identifiant parcelle
+    code_commune: str          # "75101" — code INSEE commune/arrondissement
+    section: str | None        # "AB" — section cadastrale
+    numero: str | None         # "2" — numéro de parcelle
+    contenance: int | None     # 45688 — surface en m²
+```
+
+**Geometry** : `Polygon` (EPSG:4326)
+
+**Exemple** :
+
+```json
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "75101000AB0002",
+        "code_commune": "75101",
+        "section": "AB",
+        "numero": "2",
+        "contenance": 45688
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[2.331, 48.860], [2.332, 48.860], ...]]
+      }
+    }
+  ]
+}
+```
+
+> **Note** : ne requêter les parcelles que quand le zoom est suffisant (zoom >= 15), sinon le volume de données est trop important.
+
 ### Avis
 
 **`schemas/reviews.py`**
@@ -290,7 +337,7 @@ Format de réponse d'erreur :
 | **NationalView** | `viewLevel=national` | `/geo/departments`, `/geo/choropleth` | Choropleth départements |
 | **RegionView** | `viewLevel=region` | `/geo/choropleth`, `/prices/trends/{dept}` | Zoom région, depts colorés |
 | **DepartementView** | `viewLevel=departement` | `/geo/communes?bbox=`, `/prices/trends/{dept}` | Zoom dept, bubble map communes |
-| **CommuneView** | `viewLevel=commune` | `/communes/{code}`, `/prices/{code}`, `/stats/{code}`, `/reviews/{code}`, `/geo/transactions?bbox=`, `/geo/rpls?bbox=` | Zoom commune, points cliquables |
+| **CommuneView** | `viewLevel=commune` | `/communes/{code}`, `/prices/{code}`, `/stats/{code}`, `/reviews/{code}`, `/geo/transactions?bbox=`, `/geo/rpls?bbox=`, `/geo/parcelles?bbox=` | Zoom commune, parcelles + points cliquables |
 | **TendancesView** | `viewMode=tendances` | `/prices/{code}` (x N communes) | — |
 | **ComparaisonView** | `viewMode=comparaison` | `/communes/{code}` + `/stats/{code}` (x 2-4) | — |
 | **EnergieView** | `viewMode=energie` | `/geo/choropleth?indicator=classe_dpe` | Heatmap DPE |
