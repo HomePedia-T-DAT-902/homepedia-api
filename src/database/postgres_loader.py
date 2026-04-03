@@ -294,10 +294,18 @@ def load_dvf_transactions(conn, processed_dir: Path, batch_size: int = 100_000) 
     logger.info("  Table dvf_transactions vidée")
 
     columns = [
-        "id_mutation", "code_commune", "date_mutation", "nature_mutation",
-        "type_local", "valeur_fonciere", "surface_reelle_bati",
-        "nombre_pieces_principales", "surface_terrain", "prix_m2",
-        "longitude", "latitude",
+        "id_mutation",
+        "code_commune",
+        "date_mutation",
+        "nature_mutation",
+        "type_local",
+        "valeur_fonciere",
+        "surface_reelle_bati",
+        "nombre_pieces_principales",
+        "surface_terrain",
+        "prix_m2",
+        "longitude",
+        "latitude",
     ]
     # Renommer nombre_pieces_principales → nb_pieces (nom de la colonne en DB)
     df = df.rename(columns={"nombre_pieces_principales": "nb_pieces"})
@@ -311,7 +319,7 @@ def load_dvf_transactions(conn, processed_dir: Path, batch_size: int = 100_000) 
 
     total = 0
     for start in range(0, len(df), batch_size):
-        batch = df.iloc[start: start + batch_size]
+        batch = df.iloc[start : start + batch_size]
         copy_df_to_table(conn, batch, "dvf_transactions", columns)
         total += len(batch)
         logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
@@ -355,7 +363,7 @@ def load_dpe_diagnostics(conn, processed_dir: Path, batch_size: int = 200_000) -
 
     total = 0
     for start in range(0, len(df), batch_size):
-        batch = df.iloc[start: start + batch_size]
+        batch = df.iloc[start : start + batch_size]
         copy_df_to_table(conn, batch, "dpe_diagnostics", columns)
         total += len(batch)
         logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
@@ -381,11 +389,25 @@ def load_bpe_stats(conn, processed_dir: Path) -> None:
     logger.info(f"  {len(df):,} communes lues")
 
     columns = [
-        "code_commune", "nb_equipements_total",
-        "nb_a", "nb_b", "nb_c", "nb_d", "nb_e", "nb_f",
-        "nb_maternelles", "nb_primaires", "nb_creches", "nb_colleges", "nb_lycees",
-        "nb_medecins", "nb_pharmacies", "nb_urgences",
-        "nb_supermarches", "nb_hypermarches", "nb_gares",
+        "code_commune",
+        "nb_equipements_total",
+        "nb_a",
+        "nb_b",
+        "nb_c",
+        "nb_d",
+        "nb_e",
+        "nb_f",
+        "nb_maternelles",
+        "nb_primaires",
+        "nb_creches",
+        "nb_colleges",
+        "nb_lycees",
+        "nb_medecins",
+        "nb_pharmacies",
+        "nb_urgences",
+        "nb_supermarches",
+        "nb_hypermarches",
+        "nb_gares",
     ]
     # S'assurer que toutes les colonnes numériques sont bien des int (Spark → Int64 nullable)
     for col in columns[1:]:
@@ -393,10 +415,10 @@ def load_bpe_stats(conn, processed_dir: Path) -> None:
             df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
 
     upsert_sql = f"""
-        INSERT INTO bpe_commune_stats ({', '.join(columns)})
+        INSERT INTO bpe_commune_stats ({", ".join(columns)})
         VALUES %s
         ON CONFLICT (code_commune) DO UPDATE SET
-            {', '.join(f'{c} = EXCLUDED.{c}' for c in columns[1:])}
+            {", ".join(f"{c} = EXCLUDED.{c}" for c in columns[1:])}
     """
 
     rows = [
@@ -408,7 +430,7 @@ def load_bpe_stats(conn, processed_dir: Path) -> None:
     total = 0
     with conn.cursor() as cur:
         for start in range(0, len(rows), batch_size):
-            execute_values(cur, upsert_sql, rows[start: start + batch_size])
+            execute_values(cur, upsert_sql, rows[start : start + batch_size])
             total += min(batch_size, len(rows) - start)
         conn.commit()
 
@@ -465,9 +487,7 @@ def compute_and_load_price_trends(conn, processed_dir: Path) -> None:
         how="left",
     )
     trends["variation_annuelle_pct"] = (
-        (trends["prix_median_m2"] - trends["prix_median_m2_prev"])
-        / trends["prix_median_m2_prev"]
-        * 100
+        (trends["prix_median_m2"] - trends["prix_median_m2_prev"]) / trends["prix_median_m2_prev"] * 100
     ).round(2)
     trends = trends.drop(columns=["prix_median_m2_prev"])
 
@@ -488,10 +508,13 @@ def compute_and_load_price_trends(conn, processed_dir: Path) -> None:
     total = 0
     with conn.cursor() as cur:
         for start in range(0, len(trends), batch_size):
-            batch = trends.iloc[start: start + batch_size]
+            batch = trends.iloc[start : start + batch_size]
             rows = [
                 (
-                    row.code_commune, int(row.annee), int(row.trimestre), row.type_local,
+                    row.code_commune,
+                    int(row.annee),
+                    int(row.trimestre),
+                    row.type_local,
                     None if np.isnan(row.prix_median_m2) else float(row.prix_median_m2),
                     int(row.nb_transactions),
                     None if np.isnan(row.variation_annuelle_pct) else float(row.variation_annuelle_pct),
@@ -557,15 +580,18 @@ def load_cadastre_parcelles(conn, cadastre_raw_dir: Path, depts_filter: list[str
 def main() -> None:
     parser = argparse.ArgumentParser(description="Chargement des données en base PostgreSQL.")
     parser.add_argument(
-        "--processed-dir", default="data/processed",
+        "--processed-dir",
+        default="data/processed",
         help="Dossier racine des Parquet traités (sous-dossiers geo/, dvf/, dpe/).",
     )
     parser.add_argument(
-        "--raw-dir", default="data/raw/geo",
+        "--raw-dir",
+        default="data/raw/geo",
         help="Dossier des GeoJSON bruts (pour géométries communes/depts/régions).",
     )
     parser.add_argument(
-        "--cadastre-dir", default="data/raw/cadastre",
+        "--cadastre-dir",
+        default="data/raw/cadastre",
         help="Dossier des GeoJSON.gz cadastre (parcelles_*.geojson.gz).",
     )
     parser.add_argument("--skip-geo", action="store_true", help="Ne pas charger les données géo.")
@@ -575,7 +601,9 @@ def main() -> None:
     parser.add_argument("--skip-trends", action="store_true", help="Ne pas calculer price_trends.")
     parser.add_argument("--skip-cadastre", action="store_true", help="Ne pas charger les parcelles cadastrales.")
     parser.add_argument(
-        "--cadastre-dept", nargs="+", metavar="DEPT",
+        "--cadastre-dept",
+        nargs="+",
+        metavar="DEPT",
         help="Restreindre le chargement cadastre à ces départements (ex: 75 13 69).",
     )
     args = parser.parse_args()

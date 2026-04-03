@@ -51,17 +51,17 @@ CATEGORIES = ["A", "B", "C", "D", "E", "F"]
 # ── Types d'équipements clés pour l'évaluation immobilière ───────────────────
 # Source : https://www.insee.fr/fr/metadonnees/source/serie/s1161
 TYPEQU_CLES = {
-    "nb_maternelles":  ["A101"],
-    "nb_primaires":    ["A104"],
-    "nb_creches":      ["A111"],
-    "nb_colleges":     ["A203"],
-    "nb_lycees":       ["A206", "A207"],
-    "nb_medecins":     ["D201"],
-    "nb_pharmacies":   ["D232"],
-    "nb_urgences":     ["D101"],
+    "nb_maternelles": ["A101"],
+    "nb_primaires": ["A104"],
+    "nb_creches": ["A111"],
+    "nb_colleges": ["A203"],
+    "nb_lycees": ["A206", "A207"],
+    "nb_medecins": ["D201"],
+    "nb_pharmacies": ["D232"],
+    "nb_urgences": ["D101"],
     "nb_supermarches": ["C201"],
     "nb_hypermarches": ["C101"],
-    "nb_gares":        ["E102"],
+    "nb_gares": ["E102"],
 }
 
 # ── Colonnes de sortie ────────────────────────────────────────────────────────
@@ -97,8 +97,7 @@ def read_bpe(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"[BPE] Lecture : {path}")
 
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "UTF-8")
         .option("sep", ";")
         .option("inferSchema", "false")
@@ -150,10 +149,7 @@ def normalize_code_commune(df: DataFrame) -> DataFrame:
 def filter_typequ(df: DataFrame) -> DataFrame:
     """Conserve uniquement les lignes avec un TYPEQU valide (4-5 chars, commence par A-F)."""
     before = df.count()
-    df = df.filter(
-        F.col("typequ").isNotNull()
-        & F.col("typequ").rlike("^[A-F][0-9]{2,3}$")
-    )
+    df = df.filter(F.col("typequ").isNotNull() & F.col("typequ").rlike("^[A-F][0-9]{2,3}$"))
     removed = before - df.count()
     if removed:
         logger.info(f"[Filtre TYPEQU] {removed:,} lignes avec code invalide supprimées")
@@ -183,15 +179,11 @@ def aggregate_by_commune(df: DataFrame) -> DataFrame:
 
     # Comptage par grande catégorie
     for cat in CATEGORIES:
-        agg_exprs.append(
-            F.sum(F.when(F.col("categorie") == cat, 1).otherwise(0)).alias(f"nb_{cat.lower()}")
-        )
+        agg_exprs.append(F.sum(F.when(F.col("categorie") == cat, 1).otherwise(0)).alias(f"nb_{cat.lower()}"))
 
     # Comptage des types clés
     for col_name, codes in TYPEQU_CLES.items():
-        agg_exprs.append(
-            F.sum(F.when(F.col("typequ").isin(codes), 1).otherwise(0)).alias(col_name)
-        )
+        agg_exprs.append(F.sum(F.when(F.col("typequ").isin(codes), 1).otherwise(0)).alias(col_name))
 
     result = df.groupBy("code_commune").agg(*agg_exprs)
 
@@ -224,12 +216,7 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     out_path = str(out_dir / "commune_stats")
     out_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Export Parquet → {out_path}")
-    (
-        commune_df.select(*COMMUNE_STATS_OUTPUT_COLS)
-        .write
-        .mode("overwrite")
-        .parquet(out_path)
-    )
+    (commune_df.select(*COMMUNE_STATS_OUTPUT_COLS).write.mode("overwrite").parquet(out_path))
 
     # Résumé
     logger.info("=== Traitement BPE terminé ===")

@@ -44,27 +44,37 @@ RAW_DIR = Path("data/raw/dpe")
 OUT_DIR = Path("data/processed/dpe")
 
 # ── Seuils de filtrage ────────────────────────────────────────────────────────
-CONSO_MIN = 0       # kWh/m²/an — consommation nulle ou négative = invalide
-CONSO_MAX = 3_000   # kWh/m²/an — au-dessus = erreur de saisie (max réel ~900 pour F/G)
+CONSO_MIN = 0  # kWh/m²/an — consommation nulle ou négative = invalide
+CONSO_MAX = 3_000  # kWh/m²/an — au-dessus = erreur de saisie (max réel ~900 pour F/G)
 
 CLASSES_VALIDES = {"A", "B", "C", "D", "E", "F", "G"}
 
 # ── Colonnes de sortie communes ───────────────────────────────────────────────
 DIAG_OUTPUT_COLS = [
-    "code_commune",       # str  5 chars INSEE
-    "date_diagnostic",    # date
-    "classe_energie",     # str  A-G
+    "code_commune",  # str  5 chars INSEE
+    "date_diagnostic",  # date
+    "classe_energie",  # str  A-G
     "consommation_moyenne",  # double kWh/m²/an
-    "source",             # str  "nouveau" | "ancien"
+    "source",  # str  "nouveau" | "ancien"
 ]
 
 COMMUNE_STATS_OUTPUT_COLS = [
     "code_commune",
     "nb_dpe_total",
-    "nb_classe_a", "nb_classe_b", "nb_classe_c", "nb_classe_d",
-    "nb_classe_e", "nb_classe_f", "nb_classe_g",
-    "pct_classe_a", "pct_classe_b", "pct_classe_c", "pct_classe_d",
-    "pct_classe_e", "pct_classe_f", "pct_classe_g",
+    "nb_classe_a",
+    "nb_classe_b",
+    "nb_classe_c",
+    "nb_classe_d",
+    "nb_classe_e",
+    "nb_classe_f",
+    "nb_classe_g",
+    "pct_classe_a",
+    "pct_classe_b",
+    "pct_classe_c",
+    "pct_classe_d",
+    "pct_classe_e",
+    "pct_classe_f",
+    "pct_classe_g",
     "consommation_moyenne_commune",
 ]
 
@@ -97,8 +107,7 @@ def read_dpe_nouveau(spark: SparkSession, raw_dir: Path) -> DataFrame:
 
     # Lire tout en string d'abord — le CSV a ~200 colonnes avec des noms bizarres
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "UTF-8")
         .option("sep", ",")
         .option("inferSchema", "false")
@@ -136,9 +145,7 @@ def _find_conso_column_nouveau(df: DataFrame) -> str:
             logger.info(f"[DPE nouveau] Colonne consommation trouvée : '{col}'")
             return col
 
-    raise ValueError(
-        f"Colonne de consommation introuvable. Colonnes disponibles : {df.columns[:20]}"
-    )
+    raise ValueError(f"Colonne de consommation introuvable. Colonnes disponibles : {df.columns[:20]}")
 
 
 def read_dpe_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
@@ -161,8 +168,7 @@ def read_dpe_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"[DPE ancien] Lecture : {path}")
 
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "UTF-8")  # converti en UTF-8 par download_dpe.py
         .option("sep", ",")
         .option("inferSchema", "false")
@@ -179,7 +185,9 @@ def read_dpe_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
 
     # Gérer les deux noms possibles pour code_commune
     # (la table principale du dump s'appelle td001_dpe)
-    commune_col = "code_insee_commune_actualise" if "code_insee_commune_actualise" in df.columns else "code_insee_commune"
+    commune_col = (
+        "code_insee_commune_actualise" if "code_insee_commune_actualise" in df.columns else "code_insee_commune"
+    )
 
     df = df.select(
         F.col(commune_col).alias("code_commune"),
@@ -318,23 +326,13 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     # 4. Export 1 — diagnostics individuels
     diag_path = str(out_dir / "diagnostics")
     logger.info(f"Export diagnostics → {diag_path}")
-    (
-        df.select(*DIAG_OUTPUT_COLS)
-        .write
-        .mode("overwrite")
-        .parquet(diag_path)
-    )
+    (df.select(*DIAG_OUTPUT_COLS).write.mode("overwrite").parquet(diag_path))
 
     # 5. Agrégation par commune + Export 2
     commune_df = aggregate_by_commune(df)
     commune_path = str(out_dir / "commune_stats")
     logger.info(f"Export commune_stats → {commune_path}")
-    (
-        commune_df.select(*COMMUNE_STATS_OUTPUT_COLS)
-        .write
-        .mode("overwrite")
-        .parquet(commune_path)
-    )
+    (commune_df.select(*COMMUNE_STATS_OUTPUT_COLS).write.mode("overwrite").parquet(commune_path))
 
     # Résumé
     logger.info("=== Traitement DPE terminé ===")

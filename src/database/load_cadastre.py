@@ -106,6 +106,7 @@ def iter_features(gz_path: Path):
     with gzip.open(gz_path, "rt", encoding="utf-8") as f:
         try:
             import ijson
+
             yield from ijson.items(f, "features.item")
         except ImportError:
             logger.warning("ijson non installé — chargement complet en mémoire (risque OOM sur gros depts)")
@@ -122,17 +123,19 @@ def _build_csv_buffer(batch: list) -> io.StringIO:
         geom = feature.get("geometry")
         if not geom:
             continue
-        writer.writerow([
-            _v(props.get("id")),
-            _v(props.get("commune")),
-            _v(props.get("prefixe")),
-            _v(props.get("section")),
-            _v(props.get("numero")),
-            _v(props.get("contenance")),
-            _v(props.get("created")),
-            _v(props.get("updated")),
-            json.dumps(geom),
-        ])
+        writer.writerow(
+            [
+                _v(props.get("id")),
+                _v(props.get("commune")),
+                _v(props.get("prefixe")),
+                _v(props.get("section")),
+                _v(props.get("numero")),
+                _v(props.get("contenance")),
+                _v(props.get("created")),
+                _v(props.get("updated")),
+                json.dumps(geom),
+            ]
+        )
     buf.seek(0)
     return buf
 
@@ -230,9 +233,7 @@ def load_all(depts_filter: list[str] | None, truncate: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        description="Chargement des parcelles cadastrales en base PostgreSQL."
-    )
+    parser = argparse.ArgumentParser(description="Chargement des parcelles cadastrales en base PostgreSQL.")
     parser.add_argument(
         "--dept",
         nargs="+",

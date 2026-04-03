@@ -31,10 +31,15 @@ CADASTRE_BASE = "https://cadastre.data.gouv.fr/bundler/cadastre-etalab/departeme
 
 # Tous les codes département France métropolitaine + DOM
 DEPARTEMENTS = [
-    *[f"{i:02d}" for i in range(1, 20)],   # 01-19
-    "2A", "2B",                              # Corse
-    *[f"{i:02d}" for i in range(21, 96)],   # 21-95
-    "971", "972", "973", "974", "976",       # DOM
+    *[f"{i:02d}" for i in range(1, 20)],  # 01-19
+    "2A",
+    "2B",  # Corse
+    *[f"{i:02d}" for i in range(21, 96)],  # 21-95
+    "971",
+    "972",
+    "973",
+    "974",
+    "976",  # DOM
 ]
 
 

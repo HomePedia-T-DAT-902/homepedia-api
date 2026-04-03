@@ -86,11 +86,13 @@ async def get_parcelle(
         raise HTTPException(status_code=404, detail=f"Parcelle {parcel_id} non trouvée")
 
     feature = _build_feature(row)
-    feature["properties"].update({
-        "nom_commune": row["nom_commune"],
-        "code_departement": row["code_departement"],
-        "code_postal": row["code_postal"],
-    })
+    feature["properties"].update(
+        {
+            "nom_commune": row["nom_commune"],
+            "code_departement": row["code_departement"],
+            "code_postal": row["code_postal"],
+        }
+    )
     return feature
 
 

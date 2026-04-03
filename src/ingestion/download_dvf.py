@@ -113,7 +113,7 @@ def get_dgfip_year_url(year: int) -> str:
     if not matches:
         raise RuntimeError(
             f"Aucune ressource DVF DGFiP pour l'année {year}. "
-            f"Disponible : {[r.get('title') for r in resources if 'pdf' not in r.get('format','').lower()]}"
+            f"Disponible : {[r.get('title') for r in resources if 'pdf' not in r.get('format', '').lower()]}"
         )
 
     # Si plusieurs (ex: "2020 - Second semestre"), prendre l'année complète en priorité

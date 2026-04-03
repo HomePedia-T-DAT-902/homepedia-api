@@ -50,29 +50,29 @@ RAW_DIR = Path("data/raw/dvf")
 OUT_DIR = Path("data/processed/dvf")
 
 # ── Seuils de filtrage des anomalies ─────────────────────────────────────────
-PRIX_M2_MIN = 100       # €/m² — en dessous = erreur de saisie ou donation déguisée
-PRIX_M2_MAX = 100_000   # €/m² — au-dessus = bien exceptionnel ou erreur
-SURFACE_MIN = 5         # m² — en dessous = non physique
-SURFACE_MAX = 10_000    # m² — au-dessus = probable erreur
-PRIX_MIN = 1_000        # € — ventes symboliques exclues
+PRIX_M2_MIN = 100  # €/m² — en dessous = erreur de saisie ou donation déguisée
+PRIX_M2_MAX = 100_000  # €/m² — au-dessus = bien exceptionnel ou erreur
+SURFACE_MIN = 5  # m² — en dessous = non physique
+SURFACE_MAX = 10_000  # m² — au-dessus = probable erreur
+PRIX_MIN = 1_000  # € — ventes symboliques exclues
 
 # ── Colonnes de sortie (communes aux deux sources) ────────────────────────────
 # Colonnes absentes dans le DVF brut DGFiP → remplies avec null
 OUTPUT_COLS = [
-    "id_mutation",          # str  | null pour DGFiP
-    "date_mutation",        # date
-    "nature_mutation",      # str
-    "valeur_fonciere",      # double (€)
-    "code_commune",         # str  5 chars (clé de jointure)
-    "type_local",           # str  "Maison" | "Appartement"
+    "id_mutation",  # str  | null pour DGFiP
+    "date_mutation",  # date
+    "nature_mutation",  # str
+    "valeur_fonciere",  # double (€)
+    "code_commune",  # str  5 chars (clé de jointure)
+    "type_local",  # str  "Maison" | "Appartement"
     "surface_reelle_bati",  # double (m²) — somme si multi-lots
     "nombre_pieces_principales",  # int — valeur du lot principal
-    "surface_terrain",      # double (m²) — somme si multi-lots
-    "longitude",            # double | null pour DGFiP
-    "latitude",             # double | null pour DGFiP
-    "annee",                # int  — extrait de date_mutation
-    "prix_m2",              # double — calculé
-    "source",               # str  "geo" | "dgfip"
+    "surface_terrain",  # double (m²) — somme si multi-lots
+    "longitude",  # double | null pour DGFiP
+    "latitude",  # double | null pour DGFiP
+    "annee",  # int  — extrait de date_mutation
+    "prix_m2",  # double — calculé
+    "source",  # str  "geo" | "dgfip"
 ]
 
 
@@ -87,70 +87,72 @@ def build_spark_session(app_name: str = "spark_dvf") -> SparkSession:
 # Les schémas explicites évitent que Spark infère les types (code_commune
 # "01001" serait lu comme entier 1001 en inférence automatique).
 
-GEO_DVF_SCHEMA = StructType([
-    StructField("id_mutation", StringType(), True),
-    StructField("date_mutation", StringType(), True),   # lire en str, convertir ensuite
-    StructField("numero_disposition", StringType(), True),
-    StructField("nature_mutation", StringType(), True),
-    StructField("valeur_fonciere", DoubleType(), True),
-    StructField("adresse_numero", StringType(), True),
-    StructField("adresse_suffixe", StringType(), True),
-    StructField("adresse_nom_voie", StringType(), True),
-    StructField("adresse_code_voie", StringType(), True),
-    StructField("code_postal", StringType(), True),
-    StructField("code_commune", StringType(), True),
-    StructField("nom_commune", StringType(), True),
-    StructField("code_departement", StringType(), True),
-    StructField("ancien_code_commune", StringType(), True),
-    StructField("ancien_nom_commune", StringType(), True),
-    StructField("id_parcelle", StringType(), True),
-    StructField("ancien_id_parcelle", StringType(), True),
-    StructField("numero_volume", StringType(), True),
-    StructField("lot1_numero", StringType(), True),
-    StructField("lot1_surface_carrez", DoubleType(), True),
-    StructField("lot2_numero", StringType(), True),
-    StructField("lot2_surface_carrez", DoubleType(), True),
-    StructField("lot3_numero", StringType(), True),
-    StructField("lot3_surface_carrez", DoubleType(), True),
-    StructField("lot4_numero", StringType(), True),
-    StructField("lot4_surface_carrez", DoubleType(), True),
-    StructField("lot5_numero", StringType(), True),
-    StructField("lot5_surface_carrez", DoubleType(), True),
-    StructField("nombre_lots", IntegerType(), True),
-    StructField("code_type_local", StringType(), True),
-    StructField("type_local", StringType(), True),
-    StructField("surface_reelle_bati", DoubleType(), True),
-    StructField("nombre_pieces_principales", IntegerType(), True),
-    StructField("code_nature_culture", StringType(), True),
-    StructField("nature_culture", StringType(), True),
-    StructField("code_nature_culture_speciale", StringType(), True),
-    StructField("nature_culture_speciale", StringType(), True),
-    StructField("surface_terrain", DoubleType(), True),
-    StructField("longitude", DoubleType(), True),
-    StructField("latitude", DoubleType(), True),
-])
+GEO_DVF_SCHEMA = StructType(
+    [
+        StructField("id_mutation", StringType(), True),
+        StructField("date_mutation", StringType(), True),  # lire en str, convertir ensuite
+        StructField("numero_disposition", StringType(), True),
+        StructField("nature_mutation", StringType(), True),
+        StructField("valeur_fonciere", DoubleType(), True),
+        StructField("adresse_numero", StringType(), True),
+        StructField("adresse_suffixe", StringType(), True),
+        StructField("adresse_nom_voie", StringType(), True),
+        StructField("adresse_code_voie", StringType(), True),
+        StructField("code_postal", StringType(), True),
+        StructField("code_commune", StringType(), True),
+        StructField("nom_commune", StringType(), True),
+        StructField("code_departement", StringType(), True),
+        StructField("ancien_code_commune", StringType(), True),
+        StructField("ancien_nom_commune", StringType(), True),
+        StructField("id_parcelle", StringType(), True),
+        StructField("ancien_id_parcelle", StringType(), True),
+        StructField("numero_volume", StringType(), True),
+        StructField("lot1_numero", StringType(), True),
+        StructField("lot1_surface_carrez", DoubleType(), True),
+        StructField("lot2_numero", StringType(), True),
+        StructField("lot2_surface_carrez", DoubleType(), True),
+        StructField("lot3_numero", StringType(), True),
+        StructField("lot3_surface_carrez", DoubleType(), True),
+        StructField("lot4_numero", StringType(), True),
+        StructField("lot4_surface_carrez", DoubleType(), True),
+        StructField("lot5_numero", StringType(), True),
+        StructField("lot5_surface_carrez", DoubleType(), True),
+        StructField("nombre_lots", IntegerType(), True),
+        StructField("code_type_local", StringType(), True),
+        StructField("type_local", StringType(), True),
+        StructField("surface_reelle_bati", DoubleType(), True),
+        StructField("nombre_pieces_principales", IntegerType(), True),
+        StructField("code_nature_culture", StringType(), True),
+        StructField("nature_culture", StringType(), True),
+        StructField("code_nature_culture_speciale", StringType(), True),
+        StructField("nature_culture_speciale", StringType(), True),
+        StructField("surface_terrain", DoubleType(), True),
+        StructField("longitude", DoubleType(), True),
+        StructField("latitude", DoubleType(), True),
+    ]
+)
 
 # DVF brut DGFiP : colonnes avec espaces dans les noms réels
 # On les renomme immédiatement après lecture.
 DGFIP_COL_MAP = {
-    "No disposition":             "numero_disposition",
-    "Date mutation":              "date_mutation_raw",   # JJ/MM/AAAA → converti
-    "Nature mutation":            "nature_mutation",
-    "Valeur fonciere":            "valeur_fonciere_raw", # virgule comme décimal
-    "Code voie":                  "adresse_code_voie",
-    "Voie":                       "adresse_nom_voie",
-    "Code postal":                "code_postal",
-    "Commune":                    "nom_commune",
-    "Code departement":           "code_departement",
-    "Code commune":               "code_commune_court",  # 3 chars → padded + prefixé
-    "Nombre de lots":             "nombre_lots",
-    "Code type local":            "code_type_local",
-    "Type local":                 "type_local",
-    "Surface reelle bati":        "surface_reelle_bati",
-    "Nombre pieces principales":  "nombre_pieces_principales",
-    "Nature culture":             "nature_culture",
-    "Nature culture speciale":    "nature_culture_speciale",
-    "Surface terrain":            "surface_terrain",
+    "No disposition": "numero_disposition",
+    "Date mutation": "date_mutation_raw",  # JJ/MM/AAAA → converti
+    "Nature mutation": "nature_mutation",
+    "Valeur fonciere": "valeur_fonciere_raw",  # virgule comme décimal
+    "Code voie": "adresse_code_voie",
+    "Voie": "adresse_nom_voie",
+    "Code postal": "code_postal",
+    "Commune": "nom_commune",
+    "Code departement": "code_departement",
+    "Code commune": "code_commune_court",  # 3 chars → padded + prefixé
+    "Nombre de lots": "nombre_lots",
+    "Code type local": "code_type_local",
+    "Type local": "type_local",
+    "Surface reelle bati": "surface_reelle_bati",
+    "Nombre pieces principales": "nombre_pieces_principales",
+    "Nature culture": "nature_culture",
+    "Nature culture speciale": "nature_culture_speciale",
+    "Surface terrain": "surface_terrain",
 }
 
 
@@ -170,8 +172,7 @@ def read_geo_dvf(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"[Geo-DVF] Lecture de {len(csv_files)} fichier(s) : {[f.name for f in csv_files]}")
 
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "UTF-8")
         .option("sep", ",")
         .schema(GEO_DVF_SCHEMA)
@@ -197,8 +198,7 @@ def read_dgfip_dvf(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"[DGFiP] Lecture de {len(csv_files)} fichier(s) : {[f.name for f in csv_files]}")
 
     df = (
-        spark.read
-        .option("header", "true")
+        spark.read.option("header", "true")
         .option("encoding", "ISO-8859-1")
         .option("sep", "|")
         .option("inferSchema", "false")  # tout en string, on convertit manuellement
@@ -296,37 +296,31 @@ def deduplicate_mutations(df: DataFrame) -> DataFrame:
     geo = df.filter(F.col("source") == "geo")
     dgfip = df.filter(F.col("source") == "dgfip")
 
-    geo_agg = (
-        geo.groupBy("id_mutation")
-        .agg(
-            F.first("date_mutation").alias("date_mutation"),
-            F.first("nature_mutation").alias("nature_mutation"),
-            F.first("valeur_fonciere").alias("valeur_fonciere"),
-            F.first("code_commune").alias("code_commune"),
-            F.first("type_local").alias("type_local"),
-            F.sum("surface_reelle_bati").alias("surface_reelle_bati"),
-            F.first("nombre_pieces_principales").alias("nombre_pieces_principales"),
-            F.sum("surface_terrain").alias("surface_terrain"),
-            F.first("longitude").alias("longitude"),
-            F.first("latitude").alias("latitude"),
-            F.first("source").alias("source"),
-        )
+    geo_agg = geo.groupBy("id_mutation").agg(
+        F.first("date_mutation").alias("date_mutation"),
+        F.first("nature_mutation").alias("nature_mutation"),
+        F.first("valeur_fonciere").alias("valeur_fonciere"),
+        F.first("code_commune").alias("code_commune"),
+        F.first("type_local").alias("type_local"),
+        F.sum("surface_reelle_bati").alias("surface_reelle_bati"),
+        F.first("nombre_pieces_principales").alias("nombre_pieces_principales"),
+        F.sum("surface_terrain").alias("surface_terrain"),
+        F.first("longitude").alias("longitude"),
+        F.first("latitude").alias("latitude"),
+        F.first("source").alias("source"),
     )
 
     # ── DVF DGFiP : déduplication par clé composite ───────────────────────────
     # Sans id_mutation, on groupe sur les champs qui identifient une transaction
     dgfip_key = ["date_mutation", "valeur_fonciere", "code_commune", "nature_mutation", "type_local"]
-    dgfip_agg = (
-        dgfip.groupBy(*dgfip_key)
-        .agg(
-            F.sum("surface_reelle_bati").alias("surface_reelle_bati"),
-            F.first("nombre_pieces_principales").alias("nombre_pieces_principales"),
-            F.sum("surface_terrain").alias("surface_terrain"),
-            F.lit(None).cast(StringType()).alias("id_mutation"),
-            F.lit(None).cast(DoubleType()).alias("longitude"),
-            F.lit(None).cast(DoubleType()).alias("latitude"),
-            F.first("source").alias("source"),
-        )
+    dgfip_agg = dgfip.groupBy(*dgfip_key).agg(
+        F.sum("surface_reelle_bati").alias("surface_reelle_bati"),
+        F.first("nombre_pieces_principales").alias("nombre_pieces_principales"),
+        F.sum("surface_terrain").alias("surface_terrain"),
+        F.lit(None).cast(StringType()).alias("id_mutation"),
+        F.lit(None).cast(DoubleType()).alias("longitude"),
+        F.lit(None).cast(DoubleType()).alias("latitude"),
+        F.first("source").alias("source"),
     )
 
     result = geo_agg.unionByName(dgfip_agg)
@@ -383,9 +377,18 @@ def run(raw_dir: Path, out_dir: Path) -> None:
 
     # Sélectionner les colonnes communes avant union
     common_cols = [
-        "id_mutation", "date_mutation", "nature_mutation", "valeur_fonciere",
-        "code_commune", "type_local", "surface_reelle_bati", "nombre_pieces_principales",
-        "surface_terrain", "longitude", "latitude", "source",
+        "id_mutation",
+        "date_mutation",
+        "nature_mutation",
+        "valeur_fonciere",
+        "code_commune",
+        "type_local",
+        "surface_reelle_bati",
+        "nombre_pieces_principales",
+        "surface_terrain",
+        "longitude",
+        "latitude",
+        "source",
     ]
     geo_df = geo_df.select(*common_cols)
     dgfip_df = dgfip_df.select(*common_cols)
@@ -420,12 +423,7 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     out_path = str(out_dir)
     logger.info(f"Export Parquet → {out_path}  (partitionné par annee)")
 
-    (
-        df.write
-        .mode("overwrite")
-        .partitionBy("annee")
-        .parquet(out_path)
-    )
+    (df.write.mode("overwrite").partitionBy("annee").parquet(out_path))
 
     # Résumé
     total = df.count()
