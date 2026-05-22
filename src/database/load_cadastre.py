@@ -17,6 +17,7 @@ Usage :
 
 import argparse
 import csv
+import decimal
 import gzip
 import io
 import json
@@ -133,7 +134,7 @@ def _build_csv_buffer(batch: list) -> io.StringIO:
                 _v(props.get("contenance")),
                 _v(props.get("created")),
                 _v(props.get("updated")),
-                json.dumps(geom),
+                json.dumps(geom, default=lambda o: float(o) if isinstance(o, decimal.Decimal) else o),
             ]
         )
     buf.seek(0)
