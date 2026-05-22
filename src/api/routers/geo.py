@@ -1,4 +1,4 @@
-"""Router geo — endpoints GeoJSON (parcelles cadastrales, contours)."""
+"""Router geo — endpoints GeoJSON (parcelles cadastrales, IRIS, contours)."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
@@ -125,4 +125,110 @@ async def get_parcelles_by_commune(
         "truncated": len(rows) == limit,
         "count": len(rows),
         "features": [_build_feature(row) for row in rows],
+    }
+
+
+# ── IRIS (quartiers infra-communaux) ────────────────────────────────────────
+
+
+def _build_iris_feature(row) -> dict:
+    return {
+        "type": "Feature",
+        "properties": {
+            "code_iris": row["code_iris"],
+            "code_commune": row["code_commune"],
+            "nom_iris": row["nom_iris"],
+            "type_iris": row["type_iris"],
+        },
+        "geometry": row["geometry"],
+    }
+
+
+@router.get("/iris")
+async def get_iris(
+    bbox: str | None = Query(None, description="Bounding box: min_lon,min_lat,max_lon,max_lat"),
+    code_commune: str | None = Query(None, description="Code commune INSEE (5 chars)"),
+    limit: int = Query(5000, ge=1, le=50000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return IRIS boundaries filtered by bbox or code_commune as GeoJSON."""
+    if not bbox and not code_commune:
+        raise HTTPException(status_code=422, detail="bbox ou code_commune requis")
+
+    if code_commune:
+        result = await db.execute(
+            text("""
+                SELECT i.code_iris, i.code_commune, i.nom_iris, i.type_iris,
+                       ST_AsGeoJSON(i.geom)::json AS geometry
+                FROM iris_quartiers i
+                WHERE i.code_commune = :code_commune
+                ORDER BY i.code_iris
+            """),
+            {"code_commune": code_commune},
+        )
+        rows = result.mappings().all()
+        if not rows:
+            raise HTTPException(status_code=404, detail=f"Aucun IRIS trouvé pour la commune {code_commune}")
+        return {
+            "type": "FeatureCollection",
+            "code_commune": code_commune,
+            "count": len(rows),
+            "features": [_build_iris_feature(row) for row in rows],
+        }
+
+    parts = bbox.split(",")
+    if len(parts) != 4:
+        raise HTTPException(status_code=422, detail="bbox doit contenir 4 valeurs: min_lon,min_lat,max_lon,max_lat")
+
+    try:
+        min_lon, min_lat, max_lon, max_lat = (float(p) for p in parts)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Les valeurs bbox doivent être des nombres")
+
+    result = await db.execute(
+        text("""
+            SELECT i.code_iris, i.code_commune, i.nom_iris, i.type_iris,
+                   ST_AsGeoJSON(i.geom)::json AS geometry
+            FROM iris_quartiers i
+            WHERE i.geom && ST_MakeEnvelope(:min_lon, :min_lat, :max_lon, :max_lat, 4326)
+            LIMIT :limit
+        """),
+        {"min_lon": min_lon, "min_lat": min_lat, "max_lon": max_lon, "max_lat": max_lat, "limit": limit},
+    )
+    rows = result.mappings().all()
+
+    return {
+        "type": "FeatureCollection",
+        "truncated": len(rows) == limit,
+        "count": len(rows),
+        "features": [_build_iris_feature(row) for row in rows],
+    }
+
+
+@router.get("/communes/{code_commune}/iris")
+async def get_iris_by_commune(
+    code_commune: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return all IRIS boundaries for a given commune as GeoJSON."""
+    result = await db.execute(
+        text("""
+            SELECT i.code_iris, i.code_commune, i.nom_iris, i.type_iris,
+                   ST_AsGeoJSON(i.geom)::json AS geometry
+            FROM iris_quartiers i
+            WHERE i.code_commune = :code_commune
+            ORDER BY i.code_iris
+        """),
+        {"code_commune": code_commune},
+    )
+    rows = result.mappings().all()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"Aucun IRIS trouvé pour la commune {code_commune}")
+
+    return {
+        "type": "FeatureCollection",
+        "code_commune": code_commune,
+        "count": len(rows),
+        "features": [_build_iris_feature(row) for row in rows],
     }

@@ -27,6 +27,7 @@ ingest: ## Télécharger les données brutes
 	docker compose run --rm processing python -m src.ingestion.download_loyers
 	docker compose run --rm processing python -m src.ingestion.download_crime
 	docker compose run --rm processing python -m src.ingestion.download_education
+	docker compose run --rm processing python -m src.ingestion.download_iris
 
 process: ## Traiter via PySpark
 	docker compose run --rm processing python -m src.processing.spark_dvf

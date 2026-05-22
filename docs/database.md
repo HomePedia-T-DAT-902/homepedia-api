@@ -34,6 +34,7 @@ erDiagram
     communes ||--|| city_reviews : "1:1 (JSONB)"
     communes ||--o{ listings : "1:N (JSONB)"
     communes ||--o{ parcelles_cadastrales : "1:N (~70M)"
+    communes ||--o{ iris_quartiers : "1:N (~16.5k)"
 
     regions {
         varchar code_region PK
@@ -71,6 +72,13 @@ erDiagram
         varchar numero
         integer contenance "m²"
         geometry geom "PostGIS Polygon"
+    }
+    iris_quartiers {
+        varchar code_iris PK "9 chars: commune + iris"
+        varchar code_commune FK
+        varchar nom_iris
+        char type_iris "H/A/D/Z"
+        geometry geom "PostGIS MultiPolygon"
     }
     city_reviews {
         varchar code_commune PK
@@ -136,6 +144,24 @@ parcelles_cadastrales (
 
 > Source : [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr) (Etalab)
 > Volume : ~70M parcelles, GeoJSON par département
+
+---
+
+## IRIS (quartiers infra-communaux)
+
+```sql
+iris_quartiers (
+    code_iris VARCHAR(9) PRIMARY KEY,        -- code_commune (5) + IRIS (4), ex: "751010101"
+    code_commune VARCHAR(5),                 -- FK, INDEX
+    nom_iris VARCHAR(255),                   -- ex: "Quartier Saint-Germain"
+    type_iris CHAR(1),                       -- H=habitat, A=activité, D=divers, Z=non découpé
+    geom GEOMETRY(MultiPolygon, 4326)        -- INDEX GIST
+);
+```
+
+> Source : [IGN Contours IRIS](https://geoservices.ign.fr/contoursiris) (INSEE/IGN)
+> Volume : ~16 500 IRIS, Shapefile France entière
+> Découpage infra-communal (~2 000 hab/IRIS) pour communes de 5 000+ habitants
 
 ---
 
@@ -369,7 +395,7 @@ listings (
 | Type | Index | Usage |
 |------|-------|-------|
 | B-tree | `code_commune`, `date_mutation`, `type_local`, `section` | Jointures et filtres classiques |
-| GiST | `geom`, `geom_simplified` (y compris parcelles cadastrales) | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
+| GiST | `geom`, `geom_simplified` (parcelles cadastrales, IRIS) | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
 | GIN | colonnes JSONB | Recherche dans les documents JSON (avis, annonces) |
 | GIN (trigram) | `communes.nom` | Recherche floue par nom (ILIKE + similarity) |
 
