@@ -75,6 +75,30 @@ tests/           # Tests unitaires et d'intégration
 poetry run pytest
 ```
 
+## Pipeline Membre C
+
+Commande unique pour la pipeline lourde DVF/DPE/BPE/cadastre :
+
+```bash
+# Tests ciblés ingestion + Spark + BPE
+python -m src.pipeline.member_c test --unit
+
+# Test d'intégration PostgreSQL
+python -m src.pipeline.member_c test --integration
+
+# Pipeline complète
+python -m src.pipeline.member_c all
+
+# Variante avec cadastre limité à quelques départements
+python -m src.pipeline.member_c all --with-cadastre --cadastre-dept 75 13
+```
+
+Sur Windows, si vous utilisez le venv local du repo :
+
+```powershell
+.\.venv\Scripts\python.exe -m src.pipeline.member_c test --unit
+```
+
 ## Documentation
 
 Voir le dossier [docs/](docs/) pour la documentation détaillée :

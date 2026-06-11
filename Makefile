@@ -63,6 +63,24 @@ typecheck: ## Vérifier les types (mypy)
 test: ## Lancer les tests (pytest)
 	poetry run pytest tests/ -v --tb=short
 
+member-c-test: ## Tests ciblés pipeline Membre C
+	python -m src.pipeline.member_c test --unit
+
+member-c-integration: ## Test d'intégration PostgreSQL pipeline Membre C
+	python -m src.pipeline.member_c test --integration
+
+member-c-ingest: ## Ingestion pipeline Membre C
+	python -m src.pipeline.member_c ingest
+
+member-c-process: ## Processing Spark pipeline Membre C
+	python -m src.pipeline.member_c process
+
+member-c-load: ## Chargement PostgreSQL pipeline Membre C
+	python -m src.pipeline.member_c load
+
+member-c-all: ## Pipeline complète Membre C
+	python -m src.pipeline.member_c all
+
 ci: lint typecheck test ## Lancer tous les checks CI en local
 	@echo "\n✅ Tous les checks passent"
 

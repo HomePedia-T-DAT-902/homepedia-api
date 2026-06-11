@@ -33,6 +33,8 @@ from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql import functions as F
 from pyspark.sql.types import DoubleType, IntegerType, StringType, StructField, StructType
 
+from src.processing.spark_utils import build_local_friendly_spark_session
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -64,15 +66,8 @@ POPULATION_SCHEMA = StructType(
 
 
 def build_spark_session(app_name: str = "spark_geo") -> SparkSession:
-    """
-    Crée une SparkSession.
-    - En Docker : se connecte au cluster via SPARK_MASTER_URL (spark://spark-master:7077)
-    - En local (dev) : utilise tous les cores de la machine (local[*])
-    """
-    import os
-
-    master = os.environ.get("SPARK_MASTER_URL", "local[*]")
-    return SparkSession.builder.appName(app_name).master(master).config("spark.driver.memory", "2g").getOrCreate()
+    """Crée une SparkSession adaptée au dev local et au cluster."""
+    return build_local_friendly_spark_session(app_name, driver_memory="2g", shuffle_partitions="100")
 
 
 # ── Lectures ──────────────────────────────────────────────────────────────────

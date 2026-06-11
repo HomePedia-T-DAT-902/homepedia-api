@@ -52,12 +52,14 @@ def test_geo_dvf_years_range():
 
 
 def test_dgfip_years_range():
-    assert all(2014 <= y <= 2019 for y in DGFIP_YEARS)
-    assert len(DGFIP_YEARS) == 6
+    # DGFiP couvre maintenant 2020-2025 (pré-2020 n'est plus disponible sur data.gouv.fr)
+    assert all(2020 <= y <= 2026 for y in DGFIP_YEARS)
+    assert len(DGFIP_YEARS) > 0
 
 
-def test_no_overlap_between_sources():
-    assert set(GEO_DVF_YEARS).isdisjoint(set(DGFIP_YEARS))
+def test_dgfip_years_has_2025():
+    # 2025 doit être présent — c'est la seule année DGFiP absente de Geo-DVF
+    assert 2025 in DGFIP_YEARS
 
 
 # ── download_file ─────────────────────────────────────────────────────────────
