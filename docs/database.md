@@ -34,6 +34,7 @@ erDiagram
     communes ||--|| city_reviews : "1:1 (JSONB)"
     communes ||--o{ listings : "1:N (JSONB)"
     communes ||--o{ parcelles_cadastrales : "1:N (~70M)"
+    communes ||--o{ iris_quartiers : "1:N (~16.5k)"
 
     regions {
         varchar code_region PK
@@ -72,6 +73,13 @@ erDiagram
         integer contenance "m²"
         geometry geom "PostGIS Polygon"
     }
+    iris_quartiers {
+        varchar code_iris PK "9 chars: commune + iris"
+        varchar code_commune FK
+        varchar nom_iris
+        char type_iris "H/A/D/Z"
+        geometry geom "PostGIS MultiPolygon"
+    }
     city_reviews {
         varchar code_commune PK
         jsonb ratings "INDEX GIN"
@@ -84,12 +92,14 @@ erDiagram
 
 ## Tables de dimension (COG)
 
+> **Arrondissements municipaux** : Paris (75101-75120), Lyon (69381-69389) et Marseille (13201-13216) sont insérés dans la table `communes` au même titre que les communes. Ils ont leur propre `code_commune`, géométrie et nom. Le cadastre et d'autres sources (DVF, DPE) utilisent ces codes d'arrondissement, pas le code commune global (75056, 69123, 13055).
+
 ```sql
 communes (
     code_commune VARCHAR(5) PRIMARY KEY,
     nom VARCHAR(255),
     code_departement VARCHAR(3),
-    code_region VARCHAR(2),
+    code_region VARCHAR(3),
     code_postal VARCHAR(5),
     population INTEGER,
     superficie FLOAT,                     -- km²
@@ -103,12 +113,12 @@ communes (
 departements (
     code_departement VARCHAR(3) PRIMARY KEY,
     nom VARCHAR(255),
-    code_region VARCHAR(2),
+    code_region VARCHAR(3),
     geom GEOMETRY(MultiPolygon, 4326)    -- INDEX GIST
 );
 
 regions (
-    code_region VARCHAR(2) PRIMARY KEY,
+    code_region VARCHAR(3) PRIMARY KEY,
     nom VARCHAR(255),
     geom GEOMETRY(MultiPolygon, 4326)    -- INDEX GIST
 );
@@ -134,6 +144,24 @@ parcelles_cadastrales (
 
 > Source : [cadastre.data.gouv.fr](https://cadastre.data.gouv.fr) (Etalab)
 > Volume : ~70M parcelles, GeoJSON par département
+
+---
+
+## IRIS (quartiers infra-communaux)
+
+```sql
+iris_quartiers (
+    code_iris VARCHAR(9) PRIMARY KEY,        -- code_commune (5) + IRIS (4), ex: "751010101"
+    code_commune VARCHAR(5),                 -- FK, INDEX
+    nom_iris VARCHAR(255),                   -- ex: "Quartier Saint-Germain"
+    type_iris CHAR(1),                       -- H=habitat, A=activité, D=divers, Z=non découpé
+    geom GEOMETRY(MultiPolygon, 4326)        -- INDEX GIST
+);
+```
+
+> Source : [IGN Contours IRIS](https://geoservices.ign.fr/contoursiris) (INSEE/IGN)
+> Volume : ~16 500 IRIS, Shapefile France entière
+> Découpage infra-communal (~2 000 hab/IRIS) pour communes de 5 000+ habitants
 
 ---
 
@@ -367,7 +395,7 @@ listings (
 | Type | Index | Usage |
 |------|-------|-------|
 | B-tree | `code_commune`, `date_mutation`, `type_local`, `section` | Jointures et filtres classiques |
-| GiST | `geom`, `geom_simplified` (y compris parcelles cadastrales) | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
+| GiST | `geom`, `geom_simplified` (parcelles cadastrales, IRIS) | Requêtes spatiales PostGIS (ST_Intersects, bbox) |
 | GIN | colonnes JSONB | Recherche dans les documents JSON (avis, annonces) |
 | GIN (trigram) | `communes.nom` | Recherche floue par nom (ILIKE + similarity) |
 

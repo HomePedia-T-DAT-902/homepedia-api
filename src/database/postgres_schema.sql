@@ -104,6 +104,18 @@ CREATE TABLE IF NOT EXISTS parcelles_cadastrales (
 );
 
 -- =============================================================================
+-- IRIS — Quartiers infra-communaux (contours IGN)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS iris_quartiers (
+    code_iris VARCHAR(9) PRIMARY KEY,          -- 5 chars commune + 4 chars IRIS
+    code_commune VARCHAR(5) REFERENCES communes(code_commune),
+    nom_iris VARCHAR(255),
+    type_iris CHAR(1),                         -- H=habitat, A=activité, D=divers, Z=non découpé
+    geom GEOMETRY(MultiPolygon, 4326)
+);
+
+-- =============================================================================
 -- BPE — Équipements par commune (agrégation spark_bpe.py)
 -- =============================================================================
 
@@ -160,6 +172,10 @@ CREATE INDEX IF NOT EXISTS idx_price_trends_commune ON price_trends (code_commun
 CREATE INDEX IF NOT EXISTS idx_parcelles_code_commune ON parcelles_cadastrales (code_commune);
 CREATE INDEX IF NOT EXISTS idx_parcelles_section ON parcelles_cadastrales (section);
 
+-- B-tree IRIS
+CREATE INDEX IF NOT EXISTS idx_iris_code_commune ON iris_quartiers (code_commune);
+CREATE INDEX IF NOT EXISTS idx_iris_type ON iris_quartiers (type_iris);
+
 -- GiST (requêtes spatiales PostGIS)
 CREATE INDEX IF NOT EXISTS idx_regions_geom ON regions USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_departements_geom ON departements USING GIST (geom);
@@ -167,6 +183,7 @@ CREATE INDEX IF NOT EXISTS idx_communes_geom ON communes USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_communes_geom_simplified ON communes USING GIST (geom_simplified);
 CREATE INDEX IF NOT EXISTS idx_dvf_geom ON dvf_transactions USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_parcelles_geom ON parcelles_cadastrales USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_iris_geom ON iris_quartiers USING GIST (geom);
 
 -- Recherche par nom (tri-gram pour LIKE/ILIKE performant)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;

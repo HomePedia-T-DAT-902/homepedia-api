@@ -19,28 +19,34 @@ install: ## Installer les dépendances + pre-commit
 # ─── Pipeline de données ─────────────────────────────────────────────
 
 ingest: ## Télécharger les données brutes
-	poetry run python -m src.ingestion.download_geo
-	poetry run python -m src.ingestion.download_dvf
-	poetry run python -m src.ingestion.download_dpe
-	poetry run python -m src.ingestion.download_bpe
-	poetry run python -m src.ingestion.download_insee
-	poetry run python -m src.ingestion.download_loyers
-	poetry run python -m src.ingestion.download_crime
-	poetry run python -m src.ingestion.download_education
+	docker compose run --rm processing python -m src.ingestion.download_geo
+	docker compose run --rm processing python -m src.ingestion.download_dvf
+	docker compose run --rm processing python -m src.ingestion.download_dpe
+	docker compose run --rm processing python -m src.ingestion.download_bpe
+	docker compose run --rm processing python -m src.ingestion.download_insee
+	docker compose run --rm processing python -m src.ingestion.download_loyers
+	docker compose run --rm processing python -m src.ingestion.download_crime
+	docker compose run --rm processing python -m src.ingestion.download_education
+	docker compose run --rm processing python -m src.ingestion.download_iris
 
 process: ## Traiter via PySpark
-	poetry run python -m src.processing.spark_dvf
-	poetry run python -m src.processing.spark_dpe
-	poetry run python -m src.processing.spark_aggregations
-	poetry run python -m src.processing.spark_reviews
+	docker compose run --rm processing python -m src.processing.spark_dvf
+	docker compose run --rm processing python -m src.processing.spark_dpe
+	docker compose run --rm processing python -m src.processing.spark_aggregations
+	docker compose run --rm processing python -m src.processing.spark_reviews
 
 load: ## Charger en base PostgreSQL
-	poetry run python -m src.database.postgres_loader
+	docker compose run --rm processing python -m src.database.postgres_loader
 
 update: ## Mise à jour incrémentale (7 derniers jours)
 	poetry run python -m src.ingestion.update_all --since $$(date -v-7d +%Y-%m-%d)
 
-all: setup ingest process load api ## Pipeline complet
+all: ## Pipeline complet (services + ingestion + processing + chargement + API)
+	docker compose up -d
+	$(MAKE) ingest
+	$(MAKE) process
+	$(MAKE) load
+	docker compose up -d api
 
 # ─── API ──────────────────────────────────────────────────────────────
 
