@@ -1,4 +1,8 @@
-.PHONY: help setup install ingest process load api update all lint format typecheck test ci spec spec-check clean
+.PHONY: help setup install ingest process load api update all lint format typecheck test ci spec spec-check clean \
+	load-geo load-dvf load-dpe load-bpe load-trends \
+	process-dvf process-dpe process-bpe \
+	pipeline-dvf pipeline-dpe pipeline-bpe \
+	test-pipelines db-reset
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -37,6 +41,63 @@ process: ## Traiter via PySpark
 
 load: ## Charger en base PostgreSQL
 	docker compose run --rm processing python -m src.database.postgres_loader
+
+# ─── Chargement individuel (dev) ──────────────────────────────────────
+
+load-geo: ## Charger uniquement les communes/régions/depts (prérequis FK)
+	docker compose run --rm processing python -m src.database.postgres_loader \
+		--skip-dvf --skip-dpe --skip-bpe --skip-trends --skip-cadastre
+
+load-dvf: ## Charger uniquement DVF (requiert load-geo)
+	docker compose run --rm processing python -m src.database.postgres_loader \
+		--skip-geo --skip-dpe --skip-bpe --skip-cadastre
+
+load-dpe: ## Charger uniquement DPE (requiert load-geo)
+	docker compose run --rm processing python -m src.database.postgres_loader \
+		--skip-geo --skip-dvf --skip-bpe --skip-trends --skip-cadastre
+
+load-bpe: ## Charger uniquement BPE (requiert load-geo)
+	docker compose run --rm processing python -m src.database.postgres_loader \
+		--skip-geo --skip-dvf --skip-dpe --skip-trends --skip-cadastre
+
+load-trends: ## Calculer et charger les price_trends uniquement
+	docker compose run --rm processing python -m src.database.postgres_loader \
+		--skip-geo --skip-dvf --skip-dpe --skip-bpe --skip-cadastre
+
+# ─── Processing individuel (dev) ──────────────────────────────────────
+
+process-dvf: ## Processing Spark DVF uniquement
+	docker compose run --rm processing python -m src.processing.spark_dvf
+
+process-dpe: ## Processing Spark DPE uniquement
+	docker compose run --rm processing python -m src.processing.spark_dpe
+
+process-bpe: ## Processing Spark BPE uniquement
+	docker compose run --rm processing python -m src.processing.spark_bpe
+
+# ─── Pipelines individuels bout-en-bout (dev) ─────────────────────────
+
+pipeline-dvf: process-dvf load-dvf ## DVF : processing Spark + chargement BDD
+
+pipeline-dpe: process-dpe load-dpe ## DPE : processing Spark + chargement BDD
+
+pipeline-bpe: process-bpe load-bpe ## BPE : processing Spark + chargement BDD
+
+# ─── Tests + reset (dev) ──────────────────────────────────────────────
+
+test-pipelines: ## Tests des pipelines data lourds (DVF, DPE, BPE)
+	poetry run pytest tests/processing/test_spark_dpe.py tests/processing/test_spark_bpe.py \
+		tests/ingestion/test_download_dvf.py tests/ingestion/test_download_bpe.py -v --tb=short
+
+db-reset: ## Vider et réinitialiser la base (DROP + recréation du schéma)
+	docker compose run --rm processing python -c \
+		"from src.database.postgres_loader import get_connection, init_schema; \
+		conn = get_connection(); \
+		conn.cursor().execute('DROP SCHEMA public CASCADE; CREATE SCHEMA public;'); \
+		conn.commit(); \
+		init_schema(conn); \
+		conn.close(); \
+		print('BDD réinitialisée')"
 
 update: ## Mise à jour incrémentale (7 derniers jours)
 	poetry run python -m src.ingestion.update_all --since $$(date -v-7d +%Y-%m-%d)
