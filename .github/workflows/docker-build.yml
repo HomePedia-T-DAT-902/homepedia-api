@@ -1,0 +1,21 @@
+name: Docker Build
+
+on:
+  workflow_call:
+
+jobs:
+  docker:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: Dockerfile
+            image: homepedia-api
+          - dockerfile: Dockerfile.processing
+            image: homepedia-processing
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build ${{ matrix.image }}
+        run: docker build -f ${{ matrix.dockerfile }} -t ${{ matrix.image }}:ci .

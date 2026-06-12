@@ -6,7 +6,6 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
 
 from src.ingestion.download_dpe import (
     _is_sql_dump,
@@ -14,7 +13,6 @@ from src.ingestion.download_dpe import (
     _split_sql_values,
     convert_sql_dump_to_csv,
     decompress_gz,
-    download_dpe_ancien,
     download_dpe_nouveau,
     get_datagouv_resource,
 )
@@ -130,10 +128,7 @@ def _make_sql_dump(tmp_path: Path, rows: list[tuple]) -> Path:
         ");\n",
     ]
     for row in rows:
-        vals = ",".join(
-            f"'{v}'" if isinstance(v, str) else ("NULL" if v is None else str(v))
-            for v in row
-        )
+        vals = ",".join(f"'{v}'" if isinstance(v, str) else ("NULL" if v is None else str(v)) for v in row)
         lines.append(f"INSERT INTO `dpe` VALUES ({vals});\n")
 
     with gzip.open(gz_path, "wt", encoding="utf-8") as f:
@@ -259,10 +254,9 @@ def test_download_dpe_nouveau_force_redownloads(tmp_path):
     (tmp_path / "dpe_nouveau.csv").write_text("existing")
 
     with patch("src.ingestion.download_dpe.RAW_DIR", tmp_path):
-        with patch("src.ingestion.download_dpe.get_datagouv_resource", return_value=("http://ex.com/dpe.csv", "DPE")):
-            with patch("src.ingestion.download_dpe.download_file") as mock_dl:
-                download_dpe_nouveau(force=True)
-                mock_dl.assert_called_once()
+        with patch("src.ingestion.download_dpe._download_ademe_paginated") as mock_dl:
+            download_dpe_nouveau(force=True)
+            mock_dl.assert_called_once()
 
 
 # ── decompress_gz ─────────────────────────────────────────────────────────────
