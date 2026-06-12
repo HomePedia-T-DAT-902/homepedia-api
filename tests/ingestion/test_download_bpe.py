@@ -1,7 +1,6 @@
 """Tests pour src/ingestion/download_bpe.py."""
 
 import gzip
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -17,20 +16,21 @@ from src.ingestion.download_bpe import (
 # ── get_bpe_resource_url ──────────────────────────────────────────────────────
 
 
-def test_get_bpe_resource_url_prefers_ensemble():
+def test_get_bpe_resource_url_prefers_parquet():
+    """Le code préfère une ressource Parquet si disponible."""
     mock_response = MagicMock()
     mock_response.raise_for_status = MagicMock()
     mock_response.json.return_value = {
         "resources": [
-            {"title": "BPE par département - 75", "format": "csv", "url": "http://ex.com/bpe_75.csv"},
-            {"title": "BPE ensemble France", "format": "csv", "url": "http://ex.com/bpe_ensemble.csv"},
+            {"title": "BPE CSV", "format": "csv", "url": "http://ex.com/bpe.csv"},
+            {"title": "BPE Parquet", "format": "parquet", "url": "http://ex.com/bpe.parquet"},
         ]
     }
 
     with patch("src.ingestion.download_bpe.requests.get", return_value=mock_response):
         url, title = get_bpe_resource_url()
 
-    assert "ensemble" in url
+    assert url == "http://ex.com/bpe.parquet"
 
 
 def test_get_bpe_resource_url_fallback_csv(tmp_path):

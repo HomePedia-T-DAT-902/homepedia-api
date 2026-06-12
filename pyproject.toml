@@ -50,6 +50,7 @@ wordcloud = "^1.9"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
 pytest-asyncio = "^0.24"
+pytest-cov = "^6.0"
 httpx = "^0.28"
 ruff = "^0.8"
 
