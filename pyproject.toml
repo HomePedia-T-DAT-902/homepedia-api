@@ -23,6 +23,9 @@ asyncpg = "^0.30"
 greenlet = "^3.0"
 ijson = "^3.5"
 
+# HTTP
+requests = "^2.32"
+
 [tool.poetry.group.bigdata]
 optional = true
 
