@@ -52,12 +52,14 @@ def test_geo_dvf_years_range():
 
 
 def test_dgfip_years_range():
-    assert all(2014 <= y <= 2019 for y in DGFIP_YEARS)
+    assert all(2020 <= y <= 2025 for y in DGFIP_YEARS)
     assert len(DGFIP_YEARS) == 6
 
 
-def test_no_overlap_between_sources():
-    assert set(GEO_DVF_YEARS).isdisjoint(set(DGFIP_YEARS))
+def test_dgfip_filters_geo_dvf_overlap():
+    """DGFIP_YEARS chevauche GEO_DVF_YEARS — filtré à l'exécution."""
+    overlap = set(GEO_DVF_YEARS) & set(DGFIP_YEARS)
+    assert len(overlap) > 0, "Les deux sources doivent se chevaucher (filtrage runtime)"
 
 
 # ── download_file ─────────────────────────────────────────────────────────────

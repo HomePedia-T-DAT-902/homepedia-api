@@ -259,10 +259,9 @@ def test_download_dpe_nouveau_force_redownloads(tmp_path):
     (tmp_path / "dpe_nouveau.csv").write_text("existing")
 
     with patch("src.ingestion.download_dpe.RAW_DIR", tmp_path):
-        with patch("src.ingestion.download_dpe.get_datagouv_resource", return_value=("http://ex.com/dpe.csv", "DPE")):
-            with patch("src.ingestion.download_dpe.download_file") as mock_dl:
-                download_dpe_nouveau(force=True)
-                mock_dl.assert_called_once()
+        with patch("src.ingestion.download_dpe._download_ademe_paginated") as mock_dl:
+            download_dpe_nouveau(force=True)
+            mock_dl.assert_called_once()
 
 
 # ── decompress_gz ─────────────────────────────────────────────────────────────
