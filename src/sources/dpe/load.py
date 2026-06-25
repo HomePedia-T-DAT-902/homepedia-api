@@ -32,7 +32,7 @@ def run(conn, processed_dir: Path = PROCESSED_DIR) -> None:
     batch_size = 200_000
     total = 0
     for start in range(0, len(df), batch_size):
-        batch = df.iloc[start:start + batch_size]
+        batch = df.iloc[start : start + batch_size]
         _copy_to_table(conn, batch, "dpe_diagnostics", columns)
         total += len(batch)
         logger.info(f"[DPE Load] {total:,} / {len(df):,} diagnostics chargés")

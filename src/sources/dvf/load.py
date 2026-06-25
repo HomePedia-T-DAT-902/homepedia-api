@@ -34,16 +34,25 @@ def _load_transactions(conn, processed_dir: Path, batch_size: int = 100_000) -> 
 
     df = df.rename(columns={"nombre_pieces_principales": "nb_pieces"})
     columns = [
-        "id_mutation", "code_commune", "date_mutation", "nature_mutation",
-        "type_local", "valeur_fonciere", "surface_reelle_bati", "nb_pieces",
-        "surface_terrain", "prix_m2", "longitude", "latitude",
+        "id_mutation",
+        "code_commune",
+        "date_mutation",
+        "nature_mutation",
+        "type_local",
+        "valeur_fonciere",
+        "surface_reelle_bati",
+        "nb_pieces",
+        "surface_terrain",
+        "prix_m2",
+        "longitude",
+        "latitude",
     ]
     df["nb_pieces"] = pd.to_numeric(df["nb_pieces"], errors="coerce").round().astype("Int64")
     df["date_mutation"] = pd.to_datetime(df["date_mutation"]).dt.strftime("%Y-%m-%d")
 
     total = 0
     for start in range(0, len(df), batch_size):
-        batch = df.iloc[start:start + batch_size]
+        batch = df.iloc[start : start + batch_size]
         _copy_to_table(conn, batch, "dvf_transactions", columns)
         total += len(batch)
         logger.info(f"[DVF Load] {total:,} / {len(df):,} lignes chargées")
@@ -102,10 +111,13 @@ def _compute_price_trends(conn, processed_dir: Path) -> None:
     total = 0
     with conn.cursor() as cur:
         for start in range(0, len(trends), batch_size):
-            batch = trends.iloc[start:start + batch_size]
+            batch = trends.iloc[start : start + batch_size]
             rows = [
                 (
-                    row.code_commune, int(row.annee), int(row.trimestre), row.type_local,
+                    row.code_commune,
+                    int(row.annee),
+                    int(row.trimestre),
+                    row.type_local,
                     None if np.isnan(row.prix_median_m2) else float(row.prix_median_m2),
                     int(row.nb_transactions),
                     None if np.isnan(row.variation_annuelle_pct) else float(row.variation_annuelle_pct),

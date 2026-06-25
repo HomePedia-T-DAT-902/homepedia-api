@@ -34,7 +34,5 @@ TYPEQU_CLES = {
 }
 
 OUTPUT_COLUMNS = (
-    ["code_commune", "nb_equipements_total"]
-    + [f"nb_{cat.lower()}" for cat in CATEGORIES]
-    + list(TYPEQU_CLES.keys())
+    ["code_commune", "nb_equipements_total"] + [f"nb_{cat.lower()}" for cat in CATEGORIES] + list(TYPEQU_CLES.keys())
 )

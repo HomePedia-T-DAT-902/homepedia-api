@@ -46,8 +46,7 @@ def _check_csv(path: Path, sep: str, required_cols: set[str]) -> None:
     missing = {c for c in required_cols if c.lower() not in cols_lower}
     if missing:
         raise ValueError(
-            f"Colonnes manquantes dans {path.name} : {missing}. "
-            f"Colonnes détectées : {list(df.columns)[:10]}"
+            f"Colonnes manquantes dans {path.name} : {missing}. Colonnes détectées : {list(df.columns)[:10]}"
         )
 
     logger.info(f"[DVF Preprocess] {path.name} OK ({size_mb:.0f} MB, {len(df.columns)} colonnes)")

@@ -77,10 +77,22 @@ def _stream_commune_geometries(conn, df_index, geojson_path, geom_col) -> None:
             geom = feature["geometry"]
             if geom["type"] == "Polygon":
                 geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
-            batch.append((code, row.get("nom"), row.get("code_departement"), row.get("code_region"),
-                          row.get("code_postal"), _int(row.get("population")), _float(row.get("superficie")),
-                          _float(row.get("densite")), _float(row.get("latitude")), _float(row.get("longitude")),
-                          json.dumps(geom), geom_col))
+            batch.append(
+                (
+                    code,
+                    row.get("nom"),
+                    row.get("code_departement"),
+                    row.get("code_region"),
+                    row.get("code_postal"),
+                    _int(row.get("population")),
+                    _float(row.get("superficie")),
+                    _float(row.get("densite")),
+                    _float(row.get("latitude")),
+                    _float(row.get("longitude")),
+                    json.dumps(geom),
+                    geom_col,
+                )
+            )
             if len(batch) >= BATCH_SIZE:
                 _upsert_communes_batch(conn, batch)
                 total += len(batch)
@@ -118,7 +130,14 @@ def _load_arrondissements(conn, raw_dir) -> None:
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO communes (code_commune, nom, code_departement, code_region, geom, geom_simplified) VALUES (%s,%s,%s,%s, ST_SetSRID(ST_GeomFromGeoJSON(%s),4326), ST_SetSRID(ST_GeomFromGeoJSON(%s),4326)) ON CONFLICT (code_commune) DO UPDATE SET nom=EXCLUDED.nom, geom=EXCLUDED.geom",
-                    (code, props["nom"], props.get("departement", code[:2]), props.get("region"), json.dumps(geom), geoms_50m.get(code)),
+                    (
+                        code,
+                        props["nom"],
+                        props.get("departement", code[:2]),
+                        props.get("region"),
+                        json.dumps(geom),
+                        geoms_50m.get(code),
+                    ),
                 )
             loaded += 1
     conn.commit()
@@ -142,5 +161,9 @@ def _read_geometries(path: Path) -> dict:
     return {feat["properties"]["code"]: json.dumps(feat["geometry"]) for feat in data["features"]}
 
 
-def _int(v): return int(v) if v is not None and str(v) != "nan" else None
-def _float(v): return float(v) if v is not None and str(v) != "nan" else None
+def _int(v):
+    return int(v) if v is not None and str(v) != "nan" else None
+
+
+def _float(v):
+    return float(v) if v is not None and str(v) != "nan" else None

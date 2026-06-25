@@ -61,6 +61,7 @@ def run(raw_dir: Path = RAW_DIR, force: bool = False) -> None:
 def _convert_parquet_to_csv(parquet_path: Path, csv_dest: Path) -> None:
     try:
         import pandas as pd
+
         df = pd.read_parquet(parquet_path)
         df.to_csv(csv_dest, index=False, sep=";")
         parquet_path.unlink()

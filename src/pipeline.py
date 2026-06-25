@@ -97,9 +97,9 @@ def cmd_run(args) -> None:
     errors = []
 
     for name, source in sources.items():
-        logger.info(f"\n{'='*50}")
+        logger.info(f"\n{'=' * 50}")
         logger.info(f"SOURCE : {name.upper()}")
-        logger.info(f"{'='*50}")
+        logger.info(f"{'=' * 50}")
         for step in steps:
             if not _run_step(name, source, step):
                 errors.append(f"{name}.{step}")
@@ -120,7 +120,7 @@ def cmd_step(step: str, args) -> None:
 
 
 def _print_summary(errors: list[str]) -> None:
-    logger.info(f"\n{'='*50}")
+    logger.info(f"\n{'=' * 50}")
     if errors:
         logger.error(f"Pipeline terminé avec {len(errors)} erreur(s) : {errors}")
         sys.exit(1)
@@ -139,7 +139,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     source_args = argparse.ArgumentParser(add_help=False)
-    source_args.add_argument("--sources", nargs="+", metavar="SOURCE", help=f"Sources à traiter. Disponibles : {list(SOURCES.keys())}")
+    source_args.add_argument(
+        "--sources", nargs="+", metavar="SOURCE", help=f"Sources à traiter. Disponibles : {list(SOURCES.keys())}"
+    )
     source_args.add_argument("--skip", nargs="+", metavar="SOURCE", help="Sources à exclure.")
 
     # run / run-all

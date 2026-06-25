@@ -62,7 +62,9 @@ def _read_geojson_properties(spark: SparkSession, path) -> DataFrame:
 def _build_communes(communes: DataFrame, population: DataFrame) -> DataFrame:
     df = communes.join(population.withColumnRenamed("codgeo", "code_commune"), on="code_commune", how="left")
     df = df.withColumn("population", F.col("p23_pop").cast(IntegerType()))
-    df = df.withColumn("densite", F.when(F.col("superficie") > 0, F.round(F.col("population") / F.col("superficie"), 2)))
+    df = df.withColumn(
+        "densite", F.when(F.col("superficie") > 0, F.round(F.col("population") / F.col("superficie"), 2))
+    )
     return df.drop("p23_pop")
 
 

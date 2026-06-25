@@ -60,7 +60,7 @@ def run(conn, raw_dir: Path = RAW_DIR) -> None:
 
     inserted = processed = 0
     for i in range(0, len(features), BATCH_SIZE):
-        batch = features[i:i + BATCH_SIZE]
+        batch = features[i : i + BATCH_SIZE]
         buf = _build_csv_buffer(batch)
         with conn.cursor() as cur:
             cur.execute("TRUNCATE tmp_iris")
@@ -83,13 +83,15 @@ def _build_csv_buffer(batch: list[dict]) -> io.StringIO:
         geom = feature.get("geometry")
         if not geom:
             continue
-        writer.writerow([
-            _v(props.get("code_iris")),
-            _v(props.get("code_insee")),
-            _v(props.get("nom_iris")),
-            _v(props.get("type_iris")),
-            json.dumps(geom),
-        ])
+        writer.writerow(
+            [
+                _v(props.get("code_iris")),
+                _v(props.get("code_insee")),
+                _v(props.get("nom_iris")),
+                _v(props.get("type_iris")),
+                json.dumps(geom),
+            ]
+        )
     buf.seek(0)
     return buf
 

@@ -5,8 +5,13 @@ import logging
 import requests
 
 from src.sources.geo.config import (
-    COMMUNES_CSV_FILE, COMMUNES_CSV_URL, CONTOURS_FILES,
-    ETALAB_BASE, POPULATION_DATASET_ID, POPULATION_FILE, RAW_DIR,
+    COMMUNES_CSV_FILE,
+    COMMUNES_CSV_URL,
+    CONTOURS_FILES,
+    ETALAB_BASE,
+    POPULATION_DATASET_ID,
+    POPULATION_FILE,
+    RAW_DIR,
 )
 from src.sources.utils import decompress_gz, download_file
 

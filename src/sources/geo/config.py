@@ -39,7 +39,9 @@ REQUIRED_FILES = [
 COMMUNES_CSV_REQUIRED_COLS = {"code_insee", "nom_standard", "dep_code", "reg_code"}
 
 # ── Schémas Spark ─────────────────────────────────────────────────────────────
-POPULATION_SCHEMA = StructType([
-    StructField("codgeo", StringType(), True),
-    StructField("p23_pop", DoubleType(), True),
-])
+POPULATION_SCHEMA = StructType(
+    [
+        StructField("codgeo", StringType(), True),
+        StructField("p23_pop", DoubleType(), True),
+    ]
+)

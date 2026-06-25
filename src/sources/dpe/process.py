@@ -80,14 +80,12 @@ def _read_nouveau(spark: SparkSession, raw_dir: Path) -> DataFrame:
     if not conso_col:
         raise ValueError(f"Colonne consommation introuvable. Colonnes : {df.columns[:20]}")
     logger.info(f"[DPE nouveau] Colonne consommation : '{conso_col}'")
-    return (
-        df.select(
-            F.col("code_insee_ban").alias("code_commune"),
-            F.to_date("date_etablissement_dpe", "yyyy-MM-dd").alias("date_diagnostic"),
-            F.col("etiquette_dpe").alias("classe_energie"),
-            F.col(conso_col).cast(DoubleType()).alias("consommation_moyenne"),
-        ).withColumn("source", F.lit("nouveau"))
-    )
+    return df.select(
+        F.col("code_insee_ban").alias("code_commune"),
+        F.to_date("date_etablissement_dpe", "yyyy-MM-dd").alias("date_diagnostic"),
+        F.col("etiquette_dpe").alias("classe_energie"),
+        F.col(conso_col).cast(DoubleType()).alias("consommation_moyenne"),
+    ).withColumn("source", F.lit("nouveau"))
 
 
 def _read_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
@@ -110,21 +108,17 @@ def _read_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
     logger.info(f"[DPE ancien] {before:,} → {df.count():,} après filtre vierge/effacé")
 
     commune_col = (
-        "code_insee_commune_actualise"
-        if "code_insee_commune_actualise" in df.columns
-        else "code_insee_commune"
+        "code_insee_commune_actualise" if "code_insee_commune_actualise" in df.columns else "code_insee_commune"
     )
-    return (
-        df.select(
-            F.col(commune_col).alias("code_commune"),
-            F.coalesce(
-                F.to_date("date_etablissement_dpe", "yyyy-MM-dd"),
-                F.to_date("date_etablissement_dpe", "dd/MM/yyyy"),
-            ).alias("date_diagnostic"),
-            F.col("classe_consommation_energie").alias("classe_energie"),
-            F.col("consommation_energie").cast(DoubleType()).alias("consommation_moyenne"),
-        ).withColumn("source", F.lit("ancien"))
-    )
+    return df.select(
+        F.col(commune_col).alias("code_commune"),
+        F.coalesce(
+            F.to_date("date_etablissement_dpe", "yyyy-MM-dd"),
+            F.to_date("date_etablissement_dpe", "dd/MM/yyyy"),
+        ).alias("date_diagnostic"),
+        F.col("classe_consommation_energie").alias("classe_energie"),
+        F.col("consommation_energie").cast(DoubleType()).alias("consommation_moyenne"),
+    ).withColumn("source", F.lit("ancien"))
 
 
 def _normalize(df: DataFrame) -> DataFrame:

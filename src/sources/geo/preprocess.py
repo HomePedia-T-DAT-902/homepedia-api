@@ -4,7 +4,13 @@ import logging
 
 import pandas as pd
 
-from src.sources.geo.config import COMMUNES_CSV_FILE, COMMUNES_CSV_REQUIRED_COLS, POPULATION_FILE, RAW_DIR, REQUIRED_FILES
+from src.sources.geo.config import (
+    COMMUNES_CSV_FILE,
+    COMMUNES_CSV_REQUIRED_COLS,
+    POPULATION_FILE,
+    RAW_DIR,
+    REQUIRED_FILES,
+)
 
 logger = logging.getLogger(__name__)
 

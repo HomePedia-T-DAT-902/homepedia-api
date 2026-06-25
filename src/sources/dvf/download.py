@@ -106,10 +106,7 @@ def _get_dgfip_year_url(year: int) -> str:
     if not resources:
         raise RuntimeError(f"Aucune ressource pour {DGFIP_DATASET_ID}")
 
-    matches = [
-        res for res in resources
-        if str(year) in res.get("title", "") and "txt" in res.get("format", "").lower()
-    ]
+    matches = [res for res in resources if str(year) in res.get("title", "") and "txt" in res.get("format", "").lower()]
     if not matches:
         matches = [res for res in resources if str(year) in res.get("title", "")]
     if not matches:

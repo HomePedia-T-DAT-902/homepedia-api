@@ -75,9 +75,7 @@ def _download_ademe_paginated(dataset_id: str, select_cols: str, dest: Path) -> 
             if total_count is None:
                 total_count = data.get("total", "?")
                 logger.info(
-                    f"  Total ADEME : {total_count:,}"
-                    if isinstance(total_count, int)
-                    else f"  Total : {total_count}"
+                    f"  Total ADEME : {total_count:,}" if isinstance(total_count, int) else f"  Total : {total_count}"
                 )
 
             results = data.get("results", [])

@@ -22,7 +22,6 @@ from pathlib import Path
 
 
 class DataSource(ABC):
-
     def __init__(self, raw_dir: Path = Path("data/raw"), processed_dir: Path = Path("data/processed")):
         self.raw_dir = raw_dir
         self.processed_dir = processed_dir

@@ -48,7 +48,9 @@ def _aggregate(df: DataFrame) -> DataFrame:
     df = df.withColumn("categorie", F.substring("typequ", 1, 1))
     agg = [F.count("*").alias("nb_equipements_total")]
     agg += [F.sum(F.when(F.col("categorie") == c, 1).otherwise(0)).alias(f"nb_{c.lower()}") for c in CATEGORIES]
-    agg += [F.sum(F.when(F.col("typequ").isin(codes), 1).otherwise(0)).alias(name) for name, codes in TYPEQU_CLES.items()]
+    agg += [
+        F.sum(F.when(F.col("typequ").isin(codes), 1).otherwise(0)).alias(name) for name, codes in TYPEQU_CLES.items()
+    ]
     result = df.groupBy("code_commune").agg(*agg)
     logger.info(f"[BPE] {result.count():,} communes agrégées")
     return result

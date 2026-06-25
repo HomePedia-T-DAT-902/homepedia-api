@@ -49,10 +49,7 @@ def _check_columns(df: pd.DataFrame) -> None:
     cols_lower = {c.lower() for c in df.columns}
     missing = REQUIRED_COLUMNS - cols_lower
     if missing:
-        raise ValueError(
-            f"Colonnes manquantes dans BPE : {missing}. "
-            f"Colonnes détectées : {list(df.columns)}"
-        )
+        raise ValueError(f"Colonnes manquantes dans BPE : {missing}. Colonnes détectées : {list(df.columns)}")
     logger.info(f"[BPE Preprocess] Colonnes OK : {list(df.columns)}")
 
 
@@ -60,9 +57,7 @@ def _check_row_count(path: Path) -> None:
     # Estimation rapide via la taille du fichier (évite de lire 2.8M lignes)
     size_mb = path.stat().st_size / 1e6
     if size_mb < 50:
-        raise ValueError(
-            f"BPE trop petit ({size_mb:.0f} MB) — fichier potentiellement tronqué."
-        )
+        raise ValueError(f"BPE trop petit ({size_mb:.0f} MB) — fichier potentiellement tronqué.")
     logger.info(f"[BPE Preprocess] Taille OK : {size_mb:.0f} MB")
 
 
@@ -75,7 +70,6 @@ def _check_nulls(df: pd.DataFrame) -> None:
         null_rate = df[col].isna().mean()
         if null_rate > NULL_THRESHOLD:
             raise ValueError(
-                f"Colonne '{col}' : {null_rate:.1%} de nulls (seuil : {NULL_THRESHOLD:.0%}). "
-                "Données corrompues ?"
+                f"Colonne '{col}' : {null_rate:.1%} de nulls (seuil : {NULL_THRESHOLD:.0%}). Données corrompues ?"
             )
     logger.info("[BPE Preprocess] Taux de nulls OK")

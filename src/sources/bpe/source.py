@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class BPESource(DataSource):
-
     def __init__(
         self,
         raw_dir: Path = config.RAW_DIR,

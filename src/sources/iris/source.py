@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class IRISSource(DataSource):
-
     def __init__(self, raw_dir: Path = config.RAW_DIR, processed_dir: Path = Path("data/processed/iris")):
         super().__init__(raw_dir, processed_dir)
 

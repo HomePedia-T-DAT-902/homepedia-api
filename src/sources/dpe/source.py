@@ -14,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 
 class DPESource(DataSource):
-
     def __init__(self, raw_dir: Path = config.RAW_DIR, processed_dir: Path = config.PROCESSED_DIR):
         super().__init__(raw_dir, processed_dir)
 

@@ -50,7 +50,7 @@ def run(conn, processed_dir: Path = PROCESSED_DIR) -> None:
     total = 0
     with conn.cursor() as cur:
         for start in range(0, len(rows), batch_size):
-            execute_values(cur, upsert_sql, rows[start:start + batch_size])
+            execute_values(cur, upsert_sql, rows[start : start + batch_size])
             total += min(batch_size, len(rows) - start)
         conn.commit()
 

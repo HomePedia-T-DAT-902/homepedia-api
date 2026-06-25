@@ -120,6 +120,7 @@ def _iter_features(gz_path: Path):
     with gzip.open(gz_path, "rt", encoding="utf-8") as f:
         try:
             import ijson
+
             yield from ijson.items(f, "features.item")
         except ImportError:
             logger.warning("ijson non installé — chargement complet en mémoire")
@@ -142,17 +143,19 @@ def _build_csv_buffer(batch: list) -> io.StringIO:
         geom = feature.get("geometry")
         if not geom:
             continue
-        writer.writerow([
-            _v(props.get("id")),
-            _v(props.get("commune")),
-            _v(props.get("prefixe")),
-            _v(props.get("section")),
-            _v(props.get("numero")),
-            _v(props.get("contenance")),
-            _v(props.get("created")),
-            _v(props.get("updated")),
-            json.dumps(geom, default=lambda o: float(o) if isinstance(o, decimal.Decimal) else o),
-        ])
+        writer.writerow(
+            [
+                _v(props.get("id")),
+                _v(props.get("commune")),
+                _v(props.get("prefixe")),
+                _v(props.get("section")),
+                _v(props.get("numero")),
+                _v(props.get("contenance")),
+                _v(props.get("created")),
+                _v(props.get("updated")),
+                json.dumps(geom, default=lambda o: float(o) if isinstance(o, decimal.Decimal) else o),
+            ]
+        )
     buf.seek(0)
     return buf
 
