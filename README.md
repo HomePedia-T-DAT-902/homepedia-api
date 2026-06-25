@@ -36,26 +36,26 @@ Documentation Swagger : `http://localhost:8000/docs`.
 
 ## Pipeline de données
 
-Le pipeline est piloté par une interface CLI unique :
+Le pipeline tourne dans le container Docker `processing`. Il est piloté par une interface CLI unique :
 
 ```bash
 # Pipeline complet (toutes les sources)
-python -m src.pipeline run-all
+docker compose run --rm processing python -m src.pipeline run-all
 
 # Sources spécifiques uniquement
-python -m src.pipeline run --sources geo bpe
+docker compose run --rm processing python -m src.pipeline run --sources geo bpe
 
 # Tout sauf certaines sources (ex: DVF et DPE sont volumineux)
-python -m src.pipeline run-all --skip dvf dpe
+docker compose run --rm processing python -m src.pipeline run-all --skip dvf dpe
 
 # Relancer sans re-télécharger (données raw déjà présentes)
-python -m src.pipeline run --sources bpe --skip-download
+docker compose run --rm processing python -m src.pipeline run --sources bpe --skip-download
 
 # Étapes individuelles
-python -m src.pipeline download --sources geo
-python -m src.pipeline preprocess --sources bpe
-python -m src.pipeline process --sources geo bpe
-python -m src.pipeline load --sources geo bpe
+docker compose run --rm processing python -m src.pipeline download --sources geo
+docker compose run --rm processing python -m src.pipeline preprocess --sources bpe
+docker compose run --rm processing python -m src.pipeline process --sources geo bpe
+docker compose run --rm processing python -m src.pipeline load --sources geo bpe
 ```
 
 ### Sources disponibles
