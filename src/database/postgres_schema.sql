@@ -220,3 +220,39 @@ CREATE INDEX IF NOT EXISTS idx_iris_geom ON iris_quartiers USING GIST (geom);
 -- Recherche par nom (tri-gram pour LIKE/ILIKE performant)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_communes_nom_trgm ON communes USING GIN (nom gin_trgm_ops);
+
+-- =============================================================================
+-- Risques naturels et technologiques (API Géorisques / BRGM)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS commune_risques (
+    code_commune              VARCHAR(5) PRIMARY KEY REFERENCES communes(code_commune),
+    inondation                BOOLEAN,
+    seisme                    BOOLEAN,
+    mouvement_terrain         BOOLEAN,
+    retrait_gonflement_argile BOOLEAN,
+    radon                     BOOLEAN,
+    feu_foret                 BOOLEAN,
+    icpe                      BOOLEAN,
+    source_annee              INTEGER
+);
+
+-- =============================================================================
+-- Qualité de l'air — Indice ATMO annuel (ATMO France / data.gouv.fr)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS commune_qualite_air (
+    code_commune                  VARCHAR(5) PRIMARY KEY REFERENCES communes(code_commune),
+    annee                         INTEGER,
+    indice_atmo                   FLOAT,
+    nb_jours_bon                  INTEGER,
+    nb_jours_moyen                INTEGER,
+    nb_jours_degrade              INTEGER,
+    nb_jours_mauvais              INTEGER,
+    nb_jours_tres_mauvais         INTEGER,
+    nb_jours_extremement_mauvais  INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_commune_risques_inondation ON commune_risques (inondation);
+CREATE INDEX IF NOT EXISTS idx_commune_risques_seisme     ON commune_risques (seisme);
+CREATE INDEX IF NOT EXISTS idx_commune_qualite_air_annee  ON commune_qualite_air (annee);
