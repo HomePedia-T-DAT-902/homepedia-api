@@ -16,7 +16,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.config import get_db
-from src.pipelines.ville_ideale.on_demand import ThrottledError, fetch_commune
+from src.sources.ville_ideale.on_demand import ThrottledError, fetch_commune
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["reviews"])
 
