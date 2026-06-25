@@ -1,4 +1,4 @@
-.PHONY: help setup install ingest process load api update all lint format typecheck test ci pre-commit spec spec-check clean
+.PHONY: help setup install ingest process load pipeline all api lint format typecheck test ci pre-commit spec spec-check clean
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -17,34 +17,21 @@ install: ## Installer les dépendances + pre-commit
 
 # ─── Pipeline de données ─────────────────────────────────────────────
 
-ingest: ## Télécharger les données brutes
-	docker compose run --rm processing python -m src.ingestion.download_geo
-	docker compose run --rm processing python -m src.ingestion.download_dvf
-	docker compose run --rm processing python -m src.ingestion.download_dpe
-	docker compose run --rm processing python -m src.ingestion.download_bpe
-	docker compose run --rm processing python -m src.ingestion.download_insee
-	docker compose run --rm processing python -m src.ingestion.download_loyers
-	docker compose run --rm processing python -m src.ingestion.download_crime
-	docker compose run --rm processing python -m src.ingestion.download_education
-	docker compose run --rm processing python -m src.ingestion.download_iris
+ingest: ## Télécharger les données brutes (toutes les sources)
+	docker compose run --rm processing python -m src.pipeline download
 
-process: ## Traiter via PySpark
-	docker compose run --rm processing python -m src.processing.spark_dvf
-	docker compose run --rm processing python -m src.processing.spark_dpe
-	docker compose run --rm processing python -m src.processing.spark_aggregations
-	docker compose run --rm processing python -m src.processing.spark_reviews
+process: ## Traiter via PySpark (toutes les sources)
+	docker compose run --rm processing python -m src.pipeline process
 
-load: ## Charger en base PostgreSQL
-	docker compose run --rm processing python -m src.database.postgres_loader
+load: ## Charger en base PostgreSQL (toutes les sources)
+	docker compose run --rm processing python -m src.pipeline load
 
-update: ## Mise à jour incrémentale (7 derniers jours)
-	poetry run python -m src.ingestion.update_all --since $$(date -v-7d +%Y-%m-%d)
+pipeline: ## Pipeline complet (download + preprocess + process + load)
+	docker compose run --rm processing python -m src.pipeline run-all
 
-all: ## Pipeline complet (services + ingestion + processing + chargement + API)
+all: ## Tout lancer (services + pipeline complet + API)
 	docker compose up -d
-	$(MAKE) ingest
-	$(MAKE) process
-	$(MAKE) load
+	$(MAKE) pipeline
 	docker compose up -d api
 
 # ─── API ──────────────────────────────────────────────────────────────
