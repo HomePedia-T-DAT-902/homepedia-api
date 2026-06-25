@@ -116,9 +116,16 @@ def copy_df_to_table(conn, df: pd.DataFrame, table: str, columns: list[str]) -> 
 def read_geojson_geometries(geojson_path: Path) -> dict[str, str]:
     """
     Lit un GeoJSON et retourne un dict {code: geometry_json}.
-    Le code est extrait depuis properties.code.
+    Utilise ijson pour streamer les grandes fichiers (communes-5m.geojson ~500MB)
+    et éviter les OOM. Fallback sur json.load pour les petits fichiers.
     """
     logger.info(f"Lecture géométries : {geojson_path}")
+
+    size_mb = geojson_path.stat().st_size / 1e6
+    if size_mb > 50:
+        logger.info(f"  Fichier volumineux ({size_mb:.0f} MB) — streaming ijson activé")
+        return _read_geojson_streaming(geojson_path)
+
     with open(geojson_path, encoding="utf-8") as f:
         data = json.load(f)
 
@@ -126,12 +133,41 @@ def read_geojson_geometries(geojson_path: Path) -> dict[str, str]:
     for feature in data["features"]:
         code = feature["properties"]["code"]
         geom = feature["geometry"]
-        # Forcer en MultiPolygon pour cohérence avec le schéma
         if geom["type"] == "Polygon":
             geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
         geometries[code] = json.dumps(geom)
 
     logger.info(f"  → {len(geometries)} géométries extraites")
+    return geometries
+
+
+def _read_geojson_streaming(geojson_path: Path) -> dict[str, str]:
+    """Lecture streaming via ijson — évite de charger tout le fichier en RAM."""
+    try:
+        import ijson
+    except ImportError:
+        logger.warning("ijson non disponible — fallback json.load (risque OOM sur gros fichiers)")
+        with open(geojson_path, encoding="utf-8") as f:
+            data = json.load(f)
+        geometries = {}
+        for feature in data["features"]:
+            code = feature["properties"]["code"]
+            geom = feature["geometry"]
+            if geom["type"] == "Polygon":
+                geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
+            geometries[code] = json.dumps(geom)
+        return geometries
+
+    geometries = {}
+    with open(geojson_path, "rb") as f:
+        for feature in ijson.items(f, "features.item", use_float=True):
+            code = feature["properties"]["code"]
+            geom = feature["geometry"]
+            if geom["type"] == "Polygon":
+                geom = {"type": "MultiPolygon", "coordinates": [geom["coordinates"]]}
+            geometries[code] = json.dumps(geom)
+
+    logger.info(f"  → {len(geometries)} géométries extraites (streaming)")
     return geometries
 
 
@@ -465,6 +501,16 @@ def load_bpe_stats(conn, processed_dir: Path) -> None:
 
     df = read_parquet_dir(bpe_dir)
     logger.info(f"  {len(df):,} communes lues")
+
+    # Filtrer sur les communes existantes en base (évite FK violation)
+    with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        valid_codes = {row[0] for row in cur.fetchall()}
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_codes)]
+    skipped = before - len(df)
+    if skipped:
+        logger.info(f"  {skipped:,} communes BPE ignorées (absentes de la table communes)")
 
     columns = [
         "code_commune",
