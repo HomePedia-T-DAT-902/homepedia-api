@@ -1,0 +1,51 @@
+# Pre-commit hooks mirroring the CI pipeline (.github/workflows).
+# Goal: catch lint/format/test failures locally before they block a PR.
+# Install:  make install   (runs `pre-commit install`)
+# Run all:  make pre-commit
+#
+# ruff is pinned to the version locked in poetry.lock (0.8.6) so the hook
+# behaves exactly like the CI `lint` job — no format drift, no surprise failure.
+
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
+repos:
+  # ── Lint & format (mirrors the CI `lint` job) ───────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      # ruff check src/ tests/  (+ autofix locally)
+      - id: ruff
+        name: ruff check
+        args: [--fix]
+        files: ^(src|tests)/
+      # ruff format src/ tests/  (CI runs the equivalent --check)
+      - id: ruff-format
+        name: ruff format
+        files: ^(src|tests)/
+
+  # ── Hygiene / safety nets ───────────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-toml
+      - id: check-case-conflict
+      # Guard against committing raw data dumps (data/ is gitignored).
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: debug-statements
+
+  # ── Tests (mirrors the CI `test` job, on push only to keep commits fast) ──
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: poetry run pytest tests/ -q --tb=short
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
