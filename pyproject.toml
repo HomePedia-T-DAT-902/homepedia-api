@@ -23,8 +23,9 @@ asyncpg = "^0.30"
 greenlet = "^3.0"
 ijson = "^3.5"
 
-# HTTP
+# HTTP + on-demand scraping (lazy review fetch in the API)
 requests = "^2.32"
+parsel = "^1.9"
 
 [tool.poetry.group.bigdata]
 optional = true

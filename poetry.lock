@@ -828,7 +828,7 @@ version = "1.4.0"
 description = "cssselect parses CSS3 Selectors and translates them to XPath 1.0"
 optional = false
 python-versions = ">=3.10"
-groups = ["scraping"]
+groups = ["main", "scraping"]
 files = [
     {file = "cssselect-1.4.0-py3-none-any.whl", hash = "sha256:c0ec5c0191c8ee39fcc8afc1540331d8b55b0183478c50e9c8a79d44dbceb1d8"},
     {file = "cssselect-1.4.0.tar.gz", hash = "sha256:fdaf0a1425e17dfe8c5cf66191d211b357cf7872ae8afc4c6762ddd8ac47fc92"},
@@ -1431,7 +1431,7 @@ version = "1.1.0"
 description = "JSON Matching Expressions"
 optional = false
 python-versions = ">=3.9"
-groups = ["scraping"]
+groups = ["main", "scraping"]
 files = [
     {file = "jmespath-1.1.0-py3-none-any.whl", hash = "sha256:a5663118de4908c91729bea0acadca56526eb2698e83de10cd116ae0f4e97c64"},
     {file = "jmespath-1.1.0.tar.gz", hash = "sha256:472c87d80f36026ae83c6ddd0f1d05d4e510134ed462851fd5f754c8c3cbb88d"},
@@ -1570,7 +1570,7 @@ version = "6.0.2"
 description = "Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API."
 optional = false
 python-versions = ">=3.8"
-groups = ["scraping"]
+groups = ["main", "scraping"]
 files = [
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:e77dd455b9a16bbd2a5036a63ddbd479c19572af81b624e79ef422f929eef388"},
     {file = "lxml-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:5d444858b9f07cefff6455b983aea9a67f7462ba1f6cbe4a21e8bf6791bf2153"},
@@ -2025,7 +2025,7 @@ version = "1.11.0"
 description = "Parsel is a library to extract data from HTML and XML using XPath and CSS selectors"
 optional = false
 python-versions = ">=3.10"
-groups = ["scraping"]
+groups = ["main", "scraping"]
 files = [
     {file = "parsel-1.11.0-py3-none-any.whl", hash = "sha256:bda82575df1774dd64e1c1396163f3cadb3e383e0f8080d43d45fa6705355daa"},
     {file = "parsel-1.11.0.tar.gz", hash = "sha256:5925fe087eb16fc404a7ed91e31e2c1e2a9b230da4b64f34d81358c0d0e27e88"},
@@ -3567,7 +3567,7 @@ version = "2.4.0"
 description = "Library of web-related functions"
 optional = false
 python-versions = ">=3.10"
-groups = ["scraping"]
+groups = ["main", "scraping"]
 files = [
     {file = "w3lib-2.4.0-py3-none-any.whl", hash = "sha256:260b5a22aeb86ae73213857f69ed20829a45150f8d5b12050b1f02ada414db79"},
     {file = "w3lib-2.4.0.tar.gz", hash = "sha256:e233ad21649b69d0e047a10f30181ae9677524a29f6f71f6f3c758dc0c8d2648"},
@@ -4000,4 +4000,4 @@ cffi = ["cffi (>=1.11)"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.11"
-content-hash = "e4d6be0e38c1745eefda4932b37436e4e7a2b70b62d1ae57282c64bd322e2ae6"
+content-hash = "0a75724fb7f2c693bc20d38a00c0318b93000651d929954f3a0f49a94b14fb8a"

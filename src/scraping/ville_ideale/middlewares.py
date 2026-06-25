@@ -21,7 +21,15 @@ MIN_CONTENT_BYTES = 200
 class ThrottleRetryMiddleware:
     """Retry contentless HTTP 200 responses (the site's rate-limit stub)."""
 
-    def process_response(self, request, response, spider):
+    def __init__(self, crawler=None):
+        self.crawler = crawler
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler)
+
+    def process_response(self, request, response, spider=None):
+        spider = spider or self.crawler.spider
         if response.status == 200 and len(response.body) < MIN_CONTENT_BYTES:
             new_request = get_retry_request(
                 request,
