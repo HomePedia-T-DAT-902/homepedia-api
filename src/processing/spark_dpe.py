@@ -176,12 +176,10 @@ def read_dpe_ancien(spark: SparkSession, raw_dir: Path) -> DataFrame:
     )
 
     # Filtrer les DPE vierges et annulés avant tout traitement
-    before = df.count()
     if "dpe_vierge" in df.columns:
         df = df.filter(F.col("dpe_vierge") == "0")
     if "est_efface" in df.columns:
         df = df.filter(F.col("est_efface") == "0")
-    logger.info(f"[DPE ancien] {before:,} → {df.count():,} après filtre vierge/effacé")
 
     # Gérer les deux noms possibles pour code_commune
     # (la table principale du dump s'appelle td001_dpe)
@@ -221,14 +219,11 @@ def normalize_classe_energie(df: DataFrame) -> DataFrame:
     - Trim des espaces
     - Conserve uniquement A-G
     """
-    before = df.count()
     df = df.withColumn(
         "classe_energie",
         F.upper(F.trim(F.col("classe_energie"))),
     )
     df = df.filter(F.col("classe_energie").isin(list(CLASSES_VALIDES)))
-    removed = before - df.count()
-    logger.info(f"[Normalisation classes] {removed:,} lignes hors A-G supprimées")
     return df
 
 
@@ -242,14 +237,11 @@ def normalize_code_commune(df: DataFrame) -> DataFrame:
 
 def filter_consommation(df: DataFrame) -> DataFrame:
     """Filtre les consommations aberrantes ou nulles."""
-    before = df.count()
     df = df.filter(
         F.col("consommation_moyenne").isNotNull()
         & (F.col("consommation_moyenne") > CONSO_MIN)
         & (F.col("consommation_moyenne") <= CONSO_MAX)
     )
-    removed = before - df.count()
-    logger.info(f"[Filtre consommation] {removed:,} lignes supprimées (hors {CONSO_MIN}-{CONSO_MAX} kWh/m²/an)")
     return df
 
 
@@ -305,8 +297,16 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     ancien_df = read_dpe_ancien(spark, raw_dir)
 
     # 2. Union sur colonnes communes
+    # ATTENTION : consommation_moyenne mélange des unités hétérogènes :
+    #   - DPE nouveau : kWhEF/m²/an  (énergie finale, colonne conso_5_usages_par_m2_ef)
+    #   - DPE ancien  : kWhEP/m²/an  (énergie primaire, colonne consommation_energie)
+    # Les classes A-G restent comparables. La consommation_moyenne_commune est indicative.
+    logger.warning(
+        "[DPE] consommation_moyenne mélange EF (nouveau) et CEP (ancien) — "
+        "les classes A-G sont fiables, la consommation_moyenne_commune est indicative uniquement"
+    )
     df = nouveau_df.unionByName(ancien_df)
-    logger.info(f"[Union] Total : {df.count():,} lignes")
+    logger.info("[Union] DPE nouveau + ancien fusionnés")
 
     # 3. Normalisation
     df = normalize_code_commune(df)
@@ -314,9 +314,7 @@ def run(raw_dir: Path, out_dir: Path) -> None:
     df = filter_consommation(df)
 
     # Supprimer les lignes sans code_commune valide
-    before = df.count()
     df = df.filter(F.col("code_commune").isNotNull() & (F.length("code_commune") == 5))
-    logger.info(f"[Code commune] {before - df.count():,} lignes sans code commune supprimées")
 
     # Mettre en cache pour éviter de recalculer deux fois (diagnostics + agrégation)
     df.cache()

@@ -176,6 +176,7 @@ async def get_iris(
             "features": [_build_iris_feature(row) for row in rows],
         }
 
+    assert bbox is not None
     parts = bbox.split(",")
     if len(parts) != 4:
         raise HTTPException(status_code=422, detail="bbox doit contenir 4 valeurs: min_lon,min_lat,max_lon,max_lat")

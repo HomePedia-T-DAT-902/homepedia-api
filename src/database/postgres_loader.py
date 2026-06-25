@@ -101,7 +101,9 @@ def copy_df_to_table(conn, df: pd.DataFrame, table: str, columns: list[str]) -> 
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     for row in df[columns].itertuples(index=False):
-        writer.writerow(["\\N" if (v is None or (isinstance(v, float) and np.isnan(v))) else v for v in row])
+        writer.writerow(
+            ["\\N" if (v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v))) else v for v in row]
+        )
     buf.seek(0)
 
     with conn.cursor() as cur:
@@ -365,11 +367,15 @@ def load_dvf_transactions(conn, processed_dir: Path, batch_size: int = 100_000) 
     df = read_parquet_dir(dvf_dir)
     logger.info(f"  {len(df):,} transactions lues")
 
-    # Vider la table avant rechargement complet
+    # Filtrer les codes communes absents de la table communes (fusionnées, supprimées...)
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE TABLE dvf_transactions RESTART IDENTITY CASCADE")
-    conn.commit()
-    logger.info("  Table dvf_transactions vidée")
+        cur.execute("SELECT code_commune FROM communes")
+        valid_communes = {row[0] for row in cur.fetchall()}
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_communes)]
+    skipped = before - len(df)
+    if skipped:
+        logger.warning(f"  {skipped:,} transactions ignorées (code_commune absent de communes)")
 
     columns = [
         "id_mutation",
@@ -395,23 +401,34 @@ def load_dvf_transactions(conn, processed_dir: Path, batch_size: int = 100_000) 
     # Convertir date en string ISO pour COPY
     df["date_mutation"] = pd.to_datetime(df["date_mutation"]).dt.strftime("%Y-%m-%d")
 
-    total = 0
-    for start in range(0, len(df), batch_size):
-        batch = df.iloc[start : start + batch_size]
-        copy_df_to_table(conn, batch, "dvf_transactions", columns)
-        total += len(batch)
-        logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
+    try:
+        # TRUNCATE dans la même transaction que le premier batch : si le premier COPY
+        # échoue, le TRUNCATE est rollbacké et la table n'est pas vidée à tort.
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE dvf_transactions RESTART IDENTITY CASCADE")
+        logger.info("  Table dvf_transactions vidée")
 
-    # Créer la colonne geom depuis longitude/latitude pour les transactions géolocalisées
-    with conn.cursor() as cur:
-        cur.execute("""
-            UPDATE dvf_transactions
-            SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
-            WHERE longitude IS NOT NULL AND latitude IS NOT NULL
-        """)
-    conn.commit()
-    logger.info("  → Géométries mises à jour")
-    logger.info(f"  → {total:,} transactions DVF chargées")
+        total = 0
+        for start in range(0, len(df), batch_size):
+            batch = df.iloc[start : start + batch_size]
+            copy_df_to_table(conn, batch, "dvf_transactions", columns)
+            total += len(batch)
+            logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
+
+        # Créer la colonne geom depuis longitude/latitude pour les transactions géolocalisées
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE dvf_transactions
+                SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+                WHERE longitude IS NOT NULL AND latitude IS NOT NULL
+            """)
+        conn.commit()
+        logger.info("  → Géométries mises à jour")
+        logger.info(f"  → {total:,} transactions DVF chargées")
+    except Exception:
+        conn.rollback()
+        logger.error("  Chargement DVF échoué — rollback effectué")
+        raise
 
 
 # ── DPE ──────────────────────────────────────────────────────────────────────
@@ -432,21 +449,34 @@ def load_dpe_diagnostics(conn, processed_dir: Path, batch_size: int = 200_000) -
     logger.info(f"  {len(df):,} diagnostics lus")
 
     with conn.cursor() as cur:
-        cur.execute("TRUNCATE TABLE dpe_diagnostics RESTART IDENTITY CASCADE")
-    conn.commit()
+        cur.execute("SELECT code_commune FROM communes")
+        valid_communes = {row[0] for row in cur.fetchall()}
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_communes)]
+    skipped = before - len(df)
+    if skipped:
+        logger.warning(f"  {skipped:,} diagnostics ignorés (code_commune absent de communes)")
 
     df["date_diagnostic"] = pd.to_datetime(df["date_diagnostic"]).dt.strftime("%Y-%m-%d")
 
     columns = ["code_commune", "date_diagnostic", "classe_energie", "consommation_moyenne", "source"]
 
-    total = 0
-    for start in range(0, len(df), batch_size):
-        batch = df.iloc[start : start + batch_size]
-        copy_df_to_table(conn, batch, "dpe_diagnostics", columns)
-        total += len(batch)
-        logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
+    try:
+        with conn.cursor() as cur:
+            cur.execute("TRUNCATE TABLE dpe_diagnostics RESTART IDENTITY CASCADE")
 
-    logger.info(f"  → {total:,} diagnostics DPE chargés")
+        total = 0
+        for start in range(0, len(df), batch_size):
+            batch = df.iloc[start : start + batch_size]
+            copy_df_to_table(conn, batch, "dpe_diagnostics", columns)
+            total += len(batch)
+            logger.info(f"  → {total:,} / {len(df):,} lignes chargées")
+
+        logger.info(f"  → {total:,} diagnostics DPE chargés")
+    except Exception:
+        conn.rollback()
+        logger.error("  Chargement DPE échoué — rollback effectué")
+        raise
 
 
 # ── BPE ──────────────────────────────────────────────────────────────────────
@@ -465,6 +495,15 @@ def load_bpe_stats(conn, processed_dir: Path) -> None:
 
     df = read_parquet_dir(bpe_dir)
     logger.info(f"  {len(df):,} communes lues")
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        valid_communes = {row[0] for row in cur.fetchall()}
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_communes)]
+    skipped = before - len(df)
+    if skipped:
+        logger.warning(f"  {skipped:,} communes BPE ignorées (code_commune absent de communes)")
 
     columns = [
         "code_commune",
@@ -568,6 +607,15 @@ def compute_and_load_price_trends(conn, processed_dir: Path) -> None:
         (trends["prix_median_m2"] - trends["prix_median_m2_prev"]) / trends["prix_median_m2_prev"] * 100
     ).round(2)
     trends = trends.drop(columns=["prix_median_m2_prev"])
+
+    with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        valid_communes = {row[0] for row in cur.fetchall()}
+    before = len(trends)
+    trends = trends[trends["code_commune"].isin(valid_communes)]
+    skipped = before - len(trends)
+    if skipped:
+        logger.warning(f"  {skipped:,} entrées price_trends ignorées (code_commune absent de communes)")
 
     logger.info(f"  {len(trends):,} entrées price_trends calculées")
 

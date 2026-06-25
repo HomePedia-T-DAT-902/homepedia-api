@@ -100,13 +100,19 @@ def get_bpe_resource_url() -> tuple[str, str]:
             logger.info(f"Ressource Parquet sélectionnée : {res.get('title')}  →  {res['url']}")
             return res["url"], res.get("title", "BPE")
 
-    # Fallback CSV
-    for res in resources:
-        fmt = res.get("format", "").lower()
-        url_lower = res.get("url", "").lower()
-        if "csv" in fmt or "csv" in url_lower or "gz" in url_lower:
-            logger.info(f"Ressource CSV fallback : {res.get('title')}  →  {res['url']}")
-            return res["url"], res.get("title", "BPE")
+    # Fallback CSV — préférer le fichier "ensemble" (France entière) aux fichiers par département
+    csv_resources = [
+        res
+        for res in resources
+        if "csv" in res.get("format", "").lower()
+        or "csv" in res.get("url", "").lower()
+        or "gz" in res.get("url", "").lower()
+    ]
+    if csv_resources:
+        ensemble = [r for r in csv_resources if "ensemble" in r.get("title", "").lower()]
+        chosen = ensemble[0] if ensemble else csv_resources[0]
+        logger.info(f"Ressource CSV fallback : {chosen.get('title')}  →  {chosen['url']}")
+        return chosen["url"], chosen.get("title", "BPE")
 
     # Dernier recours : première ressource
     res = resources[0]
@@ -155,10 +161,10 @@ def _convert_parquet_to_csv(parquet_path: Path, csv_dest: Path) -> None:
         df.to_csv(csv_dest, index=False, sep=";")
         parquet_path.unlink()
         logger.info(f"Converti : {len(df):,} lignes → {csv_dest.name}")
-    except ImportError:
-        # pandas non installé → garder le Parquet, spark peut le lire directement
-        logger.warning("pandas non disponible — Parquet conservé tel quel (Spark peut le lire).")
-        parquet_path.rename(csv_dest.with_suffix(".parquet"))
+    except ImportError as e:
+        raise RuntimeError(
+            "pandas est requis pour convertir le Parquet BPE en CSV. Installez-le avec : pip install pandas pyarrow"
+        ) from e
 
 
 def _log_summary(path: Path) -> None:

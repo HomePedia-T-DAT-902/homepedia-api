@@ -148,7 +148,7 @@ def test_build_spark_session_local_par_defaut():
     mock_builder.config.return_value = mock_builder
     mock_builder.getOrCreate.return_value = MagicMock()
 
-    with patch("src.processing.spark_dpe.SparkSession") as mock_spark_cls:
+    with patch("src.processing.spark_utils.SparkSession") as mock_spark_cls:
         mock_spark_cls.builder = mock_builder
         import os
         os.environ.pop("SPARK_MASTER_URL", None)
@@ -165,7 +165,7 @@ def test_build_spark_session_utilise_env():
     mock_builder.config.return_value = mock_builder
     mock_builder.getOrCreate.return_value = MagicMock()
 
-    with patch("src.processing.spark_dpe.SparkSession") as mock_spark_cls:
+    with patch("src.processing.spark_utils.SparkSession") as mock_spark_cls:
         mock_spark_cls.builder = mock_builder
         with patch.dict("os.environ", {"SPARK_MASTER_URL": "spark://master:7077"}):
             build_spark_session("test")
