@@ -1,7 +1,6 @@
 """Tests pour src/ingestion/download_dvf.py."""
 
 import gzip
-from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -52,14 +51,18 @@ def test_geo_dvf_years_range():
 
 
 def test_dgfip_years_range():
-    # DGFiP couvre maintenant 2020-2025 (pré-2020 n'est plus disponible sur data.gouv.fr)
-    assert all(2020 <= y <= 2026 for y in DGFIP_YEARS)
-    assert len(DGFIP_YEARS) > 0
+    assert all(2020 <= y <= 2025 for y in DGFIP_YEARS)
+    assert len(DGFIP_YEARS) == 6
 
 
 def test_dgfip_years_has_2025():
-    # 2025 doit être présent — c'est la seule année DGFiP absente de Geo-DVF
     assert 2025 in DGFIP_YEARS
+
+
+def test_dgfip_filters_geo_dvf_overlap():
+    """DGFIP_YEARS chevauche GEO_DVF_YEARS — filtré à l'exécution."""
+    overlap = set(GEO_DVF_YEARS) & set(DGFIP_YEARS)
+    assert len(overlap) > 0, "Les deux sources doivent se chevaucher (filtrage runtime)"
 
 
 # ── download_file ─────────────────────────────────────────────────────────────
