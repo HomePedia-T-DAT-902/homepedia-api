@@ -30,9 +30,11 @@ import time
 
 from src.sources.base import DataSource
 from src.sources.bpe.source import BPESource
+from src.sources.cadastre.source import CadastreSource
 from src.sources.dpe.source import DPESource
 from src.sources.dvf.source import DVFSource
 from src.sources.geo.source import GEOSource
+from src.sources.iris.source import IRISSource
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -44,8 +46,8 @@ SOURCES: dict[str, type[DataSource]] = {
     "bpe": BPESource,
     "dvf": DVFSource,
     "dpe": DPESource,
-    # "iris": IRISSource,
-    # "cadastre": CadastreSource,
+    "iris": IRISSource,
+    "cadastre": CadastreSource,
 }
 
 
