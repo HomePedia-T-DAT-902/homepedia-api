@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.routers import communes, geo
+from src.api.routers import communes, geo, reviews
 
 app = FastAPI(
     title="Homepedia API",
@@ -21,6 +21,7 @@ app.add_middleware(
 
 app.include_router(communes.router)
 app.include_router(geo.router)
+app.include_router(reviews.router)
 
 
 @app.get("/health")
