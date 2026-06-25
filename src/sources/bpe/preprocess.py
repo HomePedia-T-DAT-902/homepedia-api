@@ -57,14 +57,13 @@ def _check_columns(df: pd.DataFrame) -> None:
 
 
 def _check_row_count(path: Path) -> None:
-    with open(path, "rb") as f:
-        nb_lines = sum(1 for _ in f) - 1  # -1 pour l'en-tête
-    if nb_lines < MIN_ROWS:
+    # Estimation rapide via la taille du fichier (évite de lire 2.8M lignes)
+    size_mb = path.stat().st_size / 1e6
+    if size_mb < 50:
         raise ValueError(
-            f"BPE contient seulement {nb_lines:,} lignes (attendu ≥ {MIN_ROWS:,}) "
-            "— fichier potentiellement tronqué."
+            f"BPE trop petit ({size_mb:.0f} MB) — fichier potentiellement tronqué."
         )
-    logger.info(f"[BPE Preprocess] Nombre de lignes OK : {nb_lines:,}")
+    logger.info(f"[BPE Preprocess] Taille OK : {size_mb:.0f} MB")
 
 
 def _check_nulls(df: pd.DataFrame) -> None:

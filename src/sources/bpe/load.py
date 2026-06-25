@@ -18,6 +18,16 @@ def run(conn, processed_dir: Path = PROCESSED_DIR) -> None:
         raise FileNotFoundError(f"Parquet BPE absent : {parquet_dir}. Lancer process() d'abord.")
 
     df = pd.read_parquet(parquet_dir)
+    logger.info(f"[BPE Load] {len(df):,} communes lues")
+
+    # Filtrer sur les communes existantes en base (évite FK violation)
+    with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        valid_codes = {row[0] for row in cur.fetchall()}
+    before = len(df)
+    df = df[df["code_commune"].isin(valid_codes)]
+    if before - len(df):
+        logger.info(f"[BPE Load] {before - len(df):,} communes ignorées (absentes de communes)")
     logger.info(f"[BPE Load] {len(df):,} communes à charger")
 
     cols = [c for c in OUTPUT_COLUMNS if c in df.columns]
