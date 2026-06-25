@@ -46,8 +46,8 @@ class ReviewSummary(BaseModel):
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
 
-def _as_dict(value):
-    """Le JSONB peut revenir en dict ou en str selon le driver — normalise en dict."""
+def _as_json(value):
+    """Le JSONB peut revenir en str ou déjà désérialisé selon le driver — normalise."""
     if isinstance(value, str):
         return json.loads(value)
     return value
@@ -55,10 +55,10 @@ def _as_dict(value):
 
 @router.get("/{code_commune}", response_model=ReviewSummary)
 async def get_reviews(code_commune: str, db: AsyncSession = Depends(get_db)):
-    """Synthèse des avis d'une commune : note globale, nombre d'avis, notes par critère."""
+    """Synthèse des avis d'une commune : note globale, nombre d'avis, notes par critère, nuage de mots."""
     result = await db.execute(
         text("""
-            SELECT code_commune, note_globale, nb_avis, notes
+            SELECT code_commune, note_globale, nb_avis, notes, word_cloud
             FROM city_reviews
             WHERE code_commune = :code
         """),
@@ -68,10 +68,11 @@ async def get_reviews(code_commune: str, db: AsyncSession = Depends(get_db)):
     if not row:
         raise HTTPException(status_code=404, detail=f"Avis pour la commune {code_commune} non trouvés")
 
-    notes = _as_dict(row["notes"])
+    notes = _as_json(row["notes"])
     return ReviewSummary(
         code_commune=row["code_commune"],
         note_globale=row["note_globale"],
         nb_avis=row["nb_avis"],
         ratings=ReviewRatings(**notes) if notes else None,
+        word_cloud=_as_json(row["word_cloud"]) or [],
     )

@@ -39,7 +39,7 @@ from dotenv import load_dotenv
 import numpy as np
 import pandas as pd
 import psycopg2
-from psycopg2.extras import Json, execute_values
+from psycopg2.extras import execute_values
 
 load_dotenv()
 
@@ -652,155 +652,6 @@ def load_cadastre_parcelles(conn, cadastre_raw_dir: Path, depts_filter: list[str
         logger.warning(f"  Départements en erreur : {errors}")
 
 
-# ── Avis ville-ideale.fr (city_reviews JSONB) ──────────────────────────────────
-
-# Champs d'un avis conservés dans le JSONB `avis` (on retire code_commune/nom_ville,
-# redondants au niveau de la commune, et date_scraping, portée par la ligne city).
-REVIEW_FIELDS = (
-    "review_id",
-    "pseudonyme",
-    "date_avis",
-    "note_moyenne",
-    "notes",
-    "points_positifs",
-    "points_negatifs",
-    "nb_accord",
-    "nb_pas_accord",
-)
-
-
-def read_jsonl(path: Path) -> list[dict]:
-    """Lit un fichier JSON Lines en liste de dicts (liste vide si le fichier est absent)."""
-    if not path.exists():
-        return []
-    rows = []
-    with path.open(encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line:
-                rows.append(json.loads(line))
-    return rows
-
-
-def build_city_review_rows(cities: list[dict], reviews: list[dict], valid_codes: set[str]):
-    """Fusionne les communes scrapées et leurs avis en lignes prêtes pour city_reviews.
-
-    - regroupe les avis par code_commune en dédoublonnant sur review_id ;
-    - ne garde que les communes dont le code existe dans `valid_codes` (garde-fou FK).
-
-    Retourne (records, stats, dropped) où records est une liste de dicts (JSON brut,
-    sans dépendance psycopg2 → testable hors-ligne).
-    """
-    reviews_by_code: dict[str, list[dict]] = {}
-    seen_ids: dict[str, set] = {}
-    for r in reviews:
-        code = r.get("code_commune")
-        rid = r.get("review_id")
-        ids = seen_ids.setdefault(code, set())
-        if rid is not None and rid in ids:
-            continue
-        if rid is not None:
-            ids.add(rid)
-        reviews_by_code.setdefault(code, []).append({k: r.get(k) for k in REVIEW_FIELDS})
-
-    records = []
-    dropped = []
-    for c in cities:
-        code = c.get("code_commune")
-        if code not in valid_codes:
-            dropped.append(code)
-            continue
-        avis = reviews_by_code.get(code, [])
-        records.append(
-            {
-                "code_commune": code,
-                "note_globale": c.get("note_globale"),
-                "nb_avis": len(avis),
-                "notes": c.get("notes"),
-                "avis": avis,
-                "rang": c.get("rang"),
-                "avis_complets": c.get("avis_complets"),
-                "date_scraping": c.get("date_scraping"),
-            }
-        )
-
-    orphans = set(reviews_by_code) - {c.get("code_commune") for c in cities}
-    stats = {
-        "cities_total": len(cities),
-        "loaded": len(records),
-        "dropped_unknown": len(dropped),
-        "orphan_review_communes": len(orphans),
-    }
-    return records, stats, dropped
-
-
-def load_city_reviews(conn, reviews_dir: Path) -> None:
-    """Charge les avis ville-ideale.fr scrapés dans city_reviews (UPSERT, JSONB).
-
-    Lit cities.jsonl + reviews.jsonl, valide chaque code_commune contre la table
-    communes (la clé étrangère), dédoublonne les avis et upsert une ligne JSONB
-    par commune.
-    """
-    logger.info("=== Chargement city_reviews (ville-ideale) ===")
-    cities = read_jsonl(reviews_dir / "cities.jsonl")
-    reviews = read_jsonl(reviews_dir / "reviews.jsonl")
-    if not cities:
-        logger.warning(f"Aucune donnée ville-ideale dans {reviews_dir} — chargement ignoré")
-        return
-
-    with conn.cursor() as cur:
-        cur.execute("SELECT code_commune FROM communes")
-        valid_codes = {row[0] for row in cur.fetchall()}
-    if not valid_codes:
-        logger.warning("Table communes vide — charge d'abord les communes (load_communes). city_reviews ignoré")
-        return
-
-    records, stats, dropped = build_city_review_rows(cities, reviews, valid_codes)
-    logger.info(
-        f"  {stats['cities_total']:,} communes scrapées, {stats['loaded']:,} valides, "
-        f"{stats['dropped_unknown']:,} hors référentiel communes"
-    )
-    if dropped:
-        sample = sorted(set(dropped))
-        suffix = "..." if len(sample) > 10 else ""
-        logger.warning(f"  Codes ignorés (absents de communes, ex. anciennes communes) : {sample[:10]}{suffix}")
-
-    if not records:
-        return
-
-    upsert_sql = """
-        INSERT INTO city_reviews
-            (code_commune, note_globale, nb_avis, notes, avis, rang, avis_complets, date_scraping)
-        VALUES %s
-        ON CONFLICT (code_commune) DO UPDATE SET
-            note_globale = EXCLUDED.note_globale,
-            nb_avis = EXCLUDED.nb_avis,
-            notes = EXCLUDED.notes,
-            avis = EXCLUDED.avis,
-            rang = EXCLUDED.rang,
-            avis_complets = EXCLUDED.avis_complets,
-            date_scraping = EXCLUDED.date_scraping
-    """
-    rows = [
-        (
-            r["code_commune"],
-            r["note_globale"],
-            r["nb_avis"],
-            Json(r["notes"]),
-            Json(r["avis"]),
-            r["rang"],
-            r["avis_complets"],
-            r["date_scraping"],
-        )
-        for r in records
-    ]
-    with conn.cursor() as cur:
-        execute_values(cur, upsert_sql, rows)
-        conn.commit()
-
-    logger.info(f"  → {len(rows):,} communes city_reviews chargées (UPSERT)")
-
-
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 
@@ -827,12 +678,6 @@ def main() -> None:
     parser.add_argument("--skip-bpe", action="store_true", help="Ne pas charger BPE.")
     parser.add_argument("--skip-trends", action="store_true", help="Ne pas calculer price_trends.")
     parser.add_argument("--skip-cadastre", action="store_true", help="Ne pas charger les parcelles cadastrales.")
-    parser.add_argument("--skip-reviews", action="store_true", help="Ne pas charger les avis ville-ideale.")
-    parser.add_argument(
-        "--reviews-dir",
-        default="data/raw/ville_ideale",
-        help="Dossier des JSONL ville-ideale (cities.jsonl, reviews.jsonl).",
-    )
     parser.add_argument(
         "--cadastre-dept",
         nargs="+",
@@ -868,9 +713,6 @@ def main() -> None:
 
         if not args.skip_cadastre:
             load_cadastre_parcelles(conn, Path(args.cadastre_dir), depts_filter=args.cadastre_dept)
-
-        if not args.skip_reviews:
-            load_city_reviews(conn, Path(args.reviews_dir))
 
         logger.info("=== Chargement complet terminé ===")
     finally:

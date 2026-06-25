@@ -46,25 +46,35 @@ USER_AGENT = "Mozilla/5.0 (compatible; HomepediaBot/0.1; +https://github.com/Hom
 ROBOTSTXT_OBEY = False
 
 # --- Politeness: one request at a time, conservative delay, adaptive throttling ---
+# The site rate-limits aggressive clients by serving empty HTTP 200 stubs (see
+# middlewares.ThrottleRetryMiddleware). Keep the crawl slow to avoid tripping that limit;
+# combine with -s JOBDIR=... to resume a large crawl across sessions if it does trip.
 CONCURRENT_REQUESTS = 1
 CONCURRENT_REQUESTS_PER_DOMAIN = 1
-DOWNLOAD_DELAY = 2.0
+DOWNLOAD_DELAY = 3.0
 RANDOMIZE_DOWNLOAD_DELAY = True
 
 AUTOTHROTTLE_ENABLED = True
-AUTOTHROTTLE_START_DELAY = 2.0
-AUTOTHROTTLE_MAX_DELAY = 15.0
+AUTOTHROTTLE_START_DELAY = 3.0
+AUTOTHROTTLE_MAX_DELAY = 30.0
 AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
 
-# Retry transient failures with Scrapy's built-in backoff.
+# Retry transient failures, including the site's empty rate-limit responses, with back-off.
 RETRY_ENABLED = True
-RETRY_TIMES = 3
+RETRY_TIMES = 4
+
+# Detect and retry the empty 200 "throttle stub" responses (see middlewares.py).
+DOWNLOADER_MIDDLEWARES = {
+    "src.scraping.ville_ideale.middlewares.ThrottleRetryMiddleware": 555,
+}
 
 # cherche.php (the per-department city list) requires a PHPSESSID cookie, which the
 # first GET to /villespardepts.php sets. The cookies middleware carries it forward.
 COOKIES_ENABLED = True
 
+# Send browser-like headers (a missing Accept header makes some servers reply oddly).
 DEFAULT_REQUEST_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "fr-FR,fr;q=0.9",
 }
 

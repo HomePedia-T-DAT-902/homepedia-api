@@ -43,6 +43,8 @@ optional = true
 scrapy = "^2.13"  # >=2.13 for the async Spider.start() entry point
 beautifulsoup4 = "^4.12"
 requests = "^2.32"
+brotli = "^1.1"      # let Scrapy decode Brotli (br) responses it advertises support for
+zstandard = "^0.23"  # let Scrapy decode Zstandard (zstd) responses
 
 [tool.poetry.group.utils]
 optional = true

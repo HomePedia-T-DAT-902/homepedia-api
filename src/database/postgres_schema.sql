@@ -144,21 +144,6 @@ CREATE TABLE IF NOT EXISTS bpe_commune_stats (
 );
 
 -- =============================================================================
--- ville-ideale.fr — Avis citoyens scrapés (JSONB)
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS city_reviews (
-    code_commune   VARCHAR(5) PRIMARY KEY REFERENCES communes(code_commune),
-    note_globale   FLOAT,            -- moyenne des 9 critères (valeur affichée par le site)
-    nb_avis        INTEGER,          -- nombre d'avis stockés dans `avis`
-    notes          JSONB,            -- moyennes des 9 critères {"environnement": 8.02, ...}
-    avis           JSONB,            -- tableau des avis individuels (pseudo, date, notes, textes)
-    rang           VARCHAR(20),      -- ex. "19/239" (best-effort)
-    avis_complets  BOOLEAN,          -- False si une page d'avis a échoué pendant le crawl
-    date_scraping  DATE
-);
-
--- =============================================================================
 -- Index
 -- =============================================================================
 
@@ -203,8 +188,3 @@ CREATE INDEX IF NOT EXISTS idx_iris_geom ON iris_quartiers USING GIST (geom);
 -- Recherche par nom (tri-gram pour LIKE/ILIKE performant)
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE INDEX IF NOT EXISTS idx_communes_nom_trgm ON communes USING GIN (nom gin_trgm_ops);
-
--- GIN (JSONB — avis ville-ideale) + B-tree pour le choroplèthe sur la note
-CREATE INDEX IF NOT EXISTS idx_city_reviews_notes ON city_reviews USING GIN (notes);
-CREATE INDEX IF NOT EXISTS idx_city_reviews_avis ON city_reviews USING GIN (avis);
-CREATE INDEX IF NOT EXISTS idx_city_reviews_note_globale ON city_reviews (note_globale);
