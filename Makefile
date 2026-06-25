@@ -1,4 +1,4 @@
-.PHONY: help setup install ingest process load api update all lint format typecheck test ci spec spec-check clean
+.PHONY: help setup install ingest process load api update all lint format typecheck test ci pre-commit spec spec-check clean
 
 help: ## Afficher cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -13,8 +13,7 @@ setup: ## Setup complet (env + deps + containers)
 install: ## Installer les dépendances + pre-commit
 	pip install poetry
 	poetry install --no-root
-	pip install pre-commit
-	pre-commit install
+	poetry run pre-commit install
 
 # ─── Pipeline de données ─────────────────────────────────────────────
 
@@ -60,6 +59,9 @@ lint: ## Lancer le linter (ruff)
 
 format: ## Formater le code (ruff)
 	poetry run ruff format src/
+
+pre-commit: ## Lancer tous les hooks pre-commit sur le repo
+	poetry run pre-commit run --all-files
 
 typecheck: ## Vérifier les types (mypy)
 	poetry run mypy src/api/ --ignore-missing-imports
