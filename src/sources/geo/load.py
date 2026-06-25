@@ -57,14 +57,12 @@ def _load_communes(conn, processed_dir, raw_dir) -> None:
         df["code_region"] = df["code_region"].astype(str).str.zfill(2)
 
     df_index = df.set_index("code_commune")
-    total, skipped = 0, 0
-
     for geojson_file, geom_col in [("communes-5m.geojson", "geom"), ("communes-50m.geojson", "geom_simplified")]:
         path = raw_dir / geojson_file
         logger.info(f"[GEO Load] Streaming {geojson_file} ({path.stat().st_size / 1e6:.0f} MB)")
         _stream_commune_geometries(conn, df_index, path, geom_col)
 
-    logger.info(f"[GEO Load] Communes chargées")
+    logger.info("[GEO Load] Communes chargées")
     _load_arrondissements(conn, raw_dir)
 
 

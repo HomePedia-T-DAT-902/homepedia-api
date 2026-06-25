@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from src.sources.bpe.config import CSV_FILE, MIN_ROWS, RAW_DIR
+from src.sources.bpe.config import CSV_FILE, RAW_DIR
 
 logger = logging.getLogger(__name__)
 
