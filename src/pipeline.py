@@ -37,6 +37,7 @@ from src.sources.education.source import EducationSource
 from src.sources.dvf.source import DVFSource
 from src.sources.geo.source import GEOSource
 from src.sources.iris.source import IRISSource
+from src.sources.ville_ideale.source import VilleIdealeSource
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -50,6 +51,7 @@ SOURCES: dict[str, type[DataSource]] = {
     "dpe": DPESource,
     "iris": IRISSource,
     "cadastre": CadastreSource,
+    "ville_ideale": VilleIdealeSource,
     "crime": CrimeSource,
     "education": EducationSource,
 }

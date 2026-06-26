@@ -31,7 +31,7 @@ docker-compose up -d
 
 > Le schéma SQL (tables + index + PostGIS) est créé **automatiquement** au premier démarrage via `docker-entrypoint-initdb.d`.
 
-L'API est disponible sur `http://localhost:8000`.  
+L'API est disponible sur `http://localhost:8000`.
 Documentation Swagger : `http://localhost:8000/docs`.
 
 ## Pipeline de données

@@ -23,8 +23,9 @@ asyncpg = "^0.30"
 greenlet = "^3.0"
 ijson = "^3.5"
 
-# HTTP
+# HTTP + on-demand scraping (lazy review fetch in the API)
 requests = "^2.32"
+parsel = "^1.9"
 
 [tool.poetry.group.bigdata]
 optional = true
@@ -40,9 +41,11 @@ openpyxl = "^3.1"
 optional = true
 
 [tool.poetry.group.scraping.dependencies]
-scrapy = "^2.11"
+scrapy = "^2.13"  # >=2.13 for the async Spider.start() entry point
 beautifulsoup4 = "^4.12"
 requests = "^2.32"
+brotli = "^1.1"      # let Scrapy decode Brotli (br) responses it advertises support for
+zstandard = "^0.23"  # let Scrapy decode Zstandard (zstd) responses
 
 [tool.poetry.group.utils]
 optional = true
