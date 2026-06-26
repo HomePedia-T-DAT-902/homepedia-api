@@ -30,10 +30,7 @@ def run(raw_dir: Path = RAW_DIR, processed_dir: Path = PROCESSED_DIR) -> None:
 def _process(spark, raw_dir: Path, processed_dir: Path) -> None:
     logger.info("[Education] Lecture du fichier IVAL...")
     df = (
-        spark.read.option("header", "true")
-        .option("sep", ";")
-        .option("encoding", "UTF-8")
-        .csv(str(raw_dir / IVAL_FILE))
+        spark.read.option("header", "true").option("sep", ";").option("encoding", "UTF-8").csv(str(raw_dir / IVAL_FILE))
     )
     logger.info(f"[Education] {df.count():,} lignes brutes")
 

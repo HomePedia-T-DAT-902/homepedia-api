@@ -43,7 +43,4 @@ def _get_csv_url(slug: str) -> str:
             logger.info(f"[Education] Ressource (fallback) : {res.get('title')} → {res['url']}")
             return res["url"]
 
-    raise RuntimeError(
-        f"[Education] Aucune ressource CSV trouvée. "
-        f"Disponibles : {[r.get('title') for r in resources]}"
-    )
+    raise RuntimeError(f"[Education] Aucune ressource CSV trouvée. Disponibles : {[r.get('title') for r in resources]}")
