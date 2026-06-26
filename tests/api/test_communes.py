@@ -15,6 +15,19 @@ async def test_search_communes_requires_query():
 
 @pytest.mark.asyncio
 async def test_list_regions():
-    # Here, we only test that the route is accessible and returns a response.
-    # For a complete unit test, we would mock the database.
-    pass
+    from src.api.dependencies import get_commune_service
+
+    class MockCommuneService:
+        async def list_regions(self):
+            return []
+
+    app.dependency_overrides[get_commune_service] = lambda: MockCommuneService()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            response = await ac.get("/api/v1/communes/regions")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+    finally:
+        app.dependency_overrides.pop(get_commune_service, None)

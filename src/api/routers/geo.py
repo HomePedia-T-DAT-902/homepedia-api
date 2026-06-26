@@ -3,12 +3,13 @@
 from fastapi import APIRouter, Depends, Query
 
 from src.api.dependencies import get_geo_service
+from src.api.schemas.geo import GeoJSONFeature, GeoJSONFeatureCollection
 from src.api.services.geo_service import GeoService
 
 router = APIRouter(prefix="/api/v1/geo", tags=["geo"])
 
 
-@router.get("/parcelles")
+@router.get("/parcelles", response_model=GeoJSONFeatureCollection)
 async def get_parcelles(
     bbox: str = Query(..., description="Bounding box: min_lon,min_lat,max_lon,max_lat"),
     limit: int = Query(5000, ge=1, le=50000),
@@ -18,7 +19,7 @@ async def get_parcelles(
     return await service.get_parcelles(bbox, limit)
 
 
-@router.get("/parcelles/{parcel_id}")
+@router.get("/parcelles/{parcel_id}", response_model=GeoJSONFeature)
 async def get_parcelle(
     parcel_id: str,
     service: GeoService = Depends(get_geo_service),
@@ -27,7 +28,7 @@ async def get_parcelle(
     return await service.get_parcelle(parcel_id)
 
 
-@router.get("/communes/{code_commune}/parcelles")
+@router.get("/communes/{code_commune}/parcelles", response_model=GeoJSONFeatureCollection)
 async def get_parcelles_by_commune(
     code_commune: str,
     limit: int = Query(5000, ge=1, le=50000),
@@ -40,7 +41,7 @@ async def get_parcelles_by_commune(
 # ── IRIS (infra-communal districts) ────────────────────────────────────────
 
 
-@router.get("/iris")
+@router.get("/iris", response_model=GeoJSONFeatureCollection)
 async def get_iris(
     bbox: str | None = Query(None, description="Bounding box: min_lon,min_lat,max_lon,max_lat"),
     code_commune: str | None = Query(None, description="INSEE commune code (5 chars)"),
@@ -51,7 +52,7 @@ async def get_iris(
     return await service.get_iris(bbox, code_commune, limit)
 
 
-@router.get("/communes/{code_commune}/iris")
+@router.get("/communes/{code_commune}/iris", response_model=GeoJSONFeatureCollection)
 async def get_iris_by_commune(
     code_commune: str,
     service: GeoService = Depends(get_geo_service),
