@@ -144,6 +144,26 @@ CREATE TABLE IF NOT EXISTS bpe_commune_stats (
 );
 
 -- =============================================================================
+-- Sécurité — Délinquance communale (SSMSI)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS securite_commune (
+    code_commune            VARCHAR(5) REFERENCES communes(code_commune),
+    annee                   INTEGER,
+    cambriolages_nombre     INTEGER,
+    cambriolages_pour_mille NUMERIC(6,1),
+    violences_nombre        INTEGER,
+    violences_pour_mille    NUMERIC(6,1),
+    vols_nombre             INTEGER,
+    vols_pour_mille         NUMERIC(6,1),
+    stups_nombre            INTEGER,
+    stups_pour_mille        NUMERIC(6,1),
+    destructions_nombre     INTEGER,
+    destructions_pour_mille NUMERIC(6,1),
+    PRIMARY KEY (code_commune, annee)
+);
+
+-- =============================================================================
 -- Index
 -- =============================================================================
 
