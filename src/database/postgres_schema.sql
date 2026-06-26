@@ -164,6 +164,18 @@ CREATE TABLE IF NOT EXISTS securite_commune (
 );
 
 -- =============================================================================
+-- Éducation — Résultats baccalauréat par commune (IVAL lycées GT)
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS education_commune (
+    code_commune      VARCHAR(5) REFERENCES communes(code_commune),
+    annee             INTEGER,
+    bac_presents      INTEGER,
+    bac_taux_reussite NUMERIC(5,1),
+    PRIMARY KEY (code_commune, annee)
+);
+
+-- =============================================================================
 -- Index
 -- =============================================================================
 

@@ -33,6 +33,7 @@ from src.sources.bpe.source import BPESource
 from src.sources.cadastre.source import CadastreSource
 from src.sources.crime.source import CrimeSource
 from src.sources.dpe.source import DPESource
+from src.sources.education.source import EducationSource
 from src.sources.dvf.source import DVFSource
 from src.sources.geo.source import GEOSource
 from src.sources.iris.source import IRISSource
@@ -50,6 +51,7 @@ SOURCES: dict[str, type[DataSource]] = {
     "iris": IRISSource,
     "cadastre": CadastreSource,
     "crime": CrimeSource,
+    "education": EducationSource,
 }
 
 
