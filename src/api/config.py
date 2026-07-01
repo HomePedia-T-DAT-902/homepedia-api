@@ -1,23 +1,34 @@
-"""Configuration base de données et dépendances FastAPI."""
+"""Database configuration and FastAPI dependencies."""
 
-import os
 from collections.abc import AsyncGenerator
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-POSTGRES_USER = os.environ.get("POSTGRES_USER", "homepedia")
-POSTGRES_PASSWORD = os.environ.get("POSTGRES_PASSWORD", "homepedia_secret")
-POSTGRES_HOST = os.environ.get("POSTGRES_HOST", "localhost")
-POSTGRES_PORT = os.environ.get("POSTGRES_PORT", "5432")
-POSTGRES_DB = os.environ.get("POSTGRES_DB", "homepedia")
 
-DATABASE_URL = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
+class Settings(BaseSettings):
+    """API configuration via Pydantic Settings."""
 
-engine = create_async_engine(DATABASE_URL, echo=False)
+    postgres_user: str = "homepedia"
+    postgres_password: str = "homepedia_secret"
+    postgres_host: str = "localhost"
+    postgres_port: str = "5432"
+    postgres_db: str = "homepedia"
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @property
+    def database_url(self) -> str:
+        return f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+
+
+settings = Settings()
+
+engine = create_async_engine(settings.database_url, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Dependency FastAPI : fournit une session async SQLAlchemy."""
+    """FastAPI Dependency: provides an async SQLAlchemy session."""
     async with async_session() as session:
         yield session
