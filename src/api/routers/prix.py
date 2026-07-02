@@ -38,8 +38,10 @@ async def get_prix_points(
           AND latitude IS NOT NULL AND longitude IS NOT NULL
     """
     params: dict = {
-        "min_lat": min_lat, "max_lat": max_lat,
-        "min_lon": min_lon, "max_lon": max_lon,
+        "min_lat": min_lat,
+        "max_lat": max_lat,
+        "min_lon": min_lon,
+        "max_lon": max_lon,
         "limit": limit,
     }
 

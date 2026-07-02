@@ -155,7 +155,9 @@ def _copy_to_table(conn, df: pd.DataFrame, table: str, columns: list[str]) -> No
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     for row in df[columns].itertuples(index=False):
-        writer.writerow(["\\N" if (v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v))) else v for v in row])
+        writer.writerow(
+            ["\\N" if (v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v))) else v for v in row]
+        )
     buf.seek(0)
     with conn.cursor() as cur:
         cur.copy_expert(
