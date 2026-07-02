@@ -30,9 +30,7 @@ import time
 
 from src.sources.base import DataSource
 from src.sources.bpe.source import BPESource
-from src.sources.cadastre.source import CadastreSource
 from src.sources.crime.source import CrimeSource
-from src.sources.dpe.source import DPESource
 from src.sources.education.source import EducationSource
 from src.sources.dvf.source import DVFSource
 from src.sources.geo.source import GEOSource
@@ -50,9 +48,7 @@ SOURCES: dict[str, type[DataSource]] = {
     "geo": GEOSource,
     "bpe": BPESource,
     "dvf": DVFSource,
-    "dpe": DPESource,
     "iris": IRISSource,
-    "cadastre": CadastreSource,
     "ville_ideale": VilleIdealeSource,
     "crime": CrimeSource,
     "education": EducationSource,
