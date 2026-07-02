@@ -4,10 +4,10 @@ RAW_DIR = Path("data/raw/dvf")
 PROCESSED_DIR = Path("data/processed/dvf")
 
 GEO_DVF_BASE = "https://files.data.gouv.fr/geo-dvf/latest/csv"
-GEO_DVF_YEARS = [2024]
+GEO_DVF_YEARS = list(range(2020, 2025))
 
 DGFIP_DATASET_ID = "5c4ae55a634f4117716d5656"
-DGFIP_YEARS = []
+DGFIP_YEARS = list(range(2020, 2026))
 
 PRIX_M2_MIN = 100
 PRIX_M2_MAX = 100_000
