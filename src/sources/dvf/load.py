@@ -29,6 +29,13 @@ def _load_transactions(conn, processed_dir: Path, batch_size: int = 100_000) -> 
     logger.info(f"[DVF Load] {len(df):,} transactions lues")
 
     with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        communes_valides = {row[0] for row in cur.fetchall()}
+    avant = len(df)
+    df = df[df["code_commune"].isin(communes_valides)]
+    logger.info(f"[DVF Load] {avant - len(df):,} lignes ignorées (commune inconnue), {len(df):,} à charger")
+
+    with conn.cursor() as cur:
         cur.execute("TRUNCATE TABLE dvf_transactions RESTART IDENTITY CASCADE")
     conn.commit()
 
@@ -71,8 +78,12 @@ def _compute_price_trends(conn, processed_dir: Path) -> None:
     if not processed_dir.exists():
         return
 
+    with conn.cursor() as cur:
+        cur.execute("SELECT code_commune FROM communes")
+        communes_valides = {row[0] for row in cur.fetchall()}
+
     df = _read_parquet(processed_dir)
-    df = df[df["prix_m2"].notna() & df["date_mutation"].notna()].copy()
+    df = df[df["code_commune"].isin(communes_valides) & df["prix_m2"].notna() & df["date_mutation"].notna()].copy()
     df["date_mutation"] = pd.to_datetime(df["date_mutation"])
     df["annee"] = df["date_mutation"].dt.year.astype(int)
     df["trimestre"] = df["date_mutation"].dt.quarter.astype(int)
@@ -144,7 +155,7 @@ def _copy_to_table(conn, df: pd.DataFrame, table: str, columns: list[str]) -> No
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     for row in df[columns].itertuples(index=False):
-        writer.writerow(["\\N" if (v is None or (isinstance(v, float) and np.isnan(v))) else v for v in row])
+        writer.writerow(["\\N" if (v is None or v is pd.NA or (isinstance(v, float) and np.isnan(v))) else v for v in row])
     buf.seek(0)
     with conn.cursor() as cur:
         cur.copy_expert(
