@@ -9,8 +9,14 @@ RAW_FILE = "commune_risques.csv"
 COMMUNES_CSV = Path("data/raw/geo/communes-france-2025.csv")
 
 GEORISQUES_URL = "https://georisques.gouv.fr/api/v1/gaspar/risques"
+GEORISQUES_MVT_URL = "https://georisques.gouv.fr/api/v1/mvt"
+GEORISQUES_CAVITES_URL = "https://georisques.gouv.fr/api/v1/cavites"
+GEORISQUES_ICPE_URL = "https://georisques.gouv.fr/api/v1/installations_classees"
 MAX_WORKERS = 5
 PAUSE_BETWEEN_BATCHES = 1.0  # secondes
+
+GEOPOINTS_FILE = "risques_geopoints.csv"
+GEOPOINTS_COLUMNS = ["type_risque", "longitude", "latitude", "code_commune"]
 
 # num_risque → colonne CSV  (vérifié sur l'API réelle)
 RISK_CODE_MAP = {
