@@ -24,20 +24,6 @@ class ICommuneRepository(ABC):
 
 class IGeoRepository(ABC):
     @abstractmethod
-    async def get_parcelles_in_bbox(
-        self, min_lon: float, min_lat: float, max_lon: float, max_lat: float, limit: int
-    ) -> list[dict[str, Any]]:
-        pass
-
-    @abstractmethod
-    async def get_parcelle_by_id(self, parcel_id: str) -> dict[str, Any] | None:
-        pass
-
-    @abstractmethod
-    async def get_parcelles_by_commune(self, code_commune: str, limit: int) -> list[dict[str, Any]]:
-        pass
-
-    @abstractmethod
     async def get_iris_in_bbox(
         self, min_lon: float, min_lat: float, max_lon: float, max_lat: float, limit: int
     ) -> list[dict[str, Any]]:

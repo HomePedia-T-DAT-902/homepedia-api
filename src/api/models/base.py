@@ -88,17 +88,6 @@ class PriceTrend(Base):
     variation_annuelle_pct: Mapped[float | None] = mapped_column(Float)
 
 
-class DpeDiagnostic(Base):
-    __tablename__ = "dpe_diagnostics"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    code_commune: Mapped[str | None] = mapped_column(ForeignKey("communes.code_commune"))
-    date_diagnostic: Mapped[date | None] = mapped_column(Date)
-    classe_energie: Mapped[str | None] = mapped_column(String(1))
-    consommation_moyenne: Mapped[float | None] = mapped_column(Float)
-    source: Mapped[str | None] = mapped_column(String(10))
-
-
 class BpeCommuneStat(Base):
     __tablename__ = "bpe_commune_stats"
 

@@ -75,35 +75,6 @@ CREATE TABLE IF NOT EXISTS price_trends (
 );
 
 -- =============================================================================
--- Tables de faits — DPE (Diagnostics de Performance Énergétique)
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS dpe_diagnostics (
-    id SERIAL PRIMARY KEY,
-    code_commune VARCHAR(5) REFERENCES communes(code_commune),
-    date_diagnostic DATE,
-    classe_energie CHAR(1),
-    consommation_moyenne FLOAT,
-    source VARCHAR(10)
-);
-
--- =============================================================================
--- Cadastre — Parcelles cadastrales (contours Etalab)
--- =============================================================================
-
-CREATE TABLE IF NOT EXISTS parcelles_cadastrales (
-    id VARCHAR(20) PRIMARY KEY,
-    code_commune VARCHAR(5) REFERENCES communes(code_commune),
-    prefixe VARCHAR(3),
-    section VARCHAR(2),
-    numero VARCHAR(4),
-    contenance INTEGER,
-    created DATE,
-    updated DATE,
-    geom GEOMETRY(Polygon, 4326)
-);
-
--- =============================================================================
 -- IRIS — Quartiers infra-communaux (contours IGN)
 -- =============================================================================
 
@@ -186,11 +157,6 @@ CREATE INDEX IF NOT EXISTS idx_communes_code_region ON communes (code_region);
 CREATE INDEX IF NOT EXISTS idx_communes_code_postal ON communes (code_postal);
 CREATE INDEX IF NOT EXISTS idx_departements_code_region ON departements (code_region);
 
--- B-tree DPE
-CREATE INDEX IF NOT EXISTS idx_dpe_code_commune ON dpe_diagnostics (code_commune);
-CREATE INDEX IF NOT EXISTS idx_dpe_classe_energie ON dpe_diagnostics (classe_energie);
-CREATE INDEX IF NOT EXISTS idx_dpe_date_diagnostic ON dpe_diagnostics (date_diagnostic);
-
 -- B-tree DVF (filtres fréquents)
 CREATE INDEX IF NOT EXISTS idx_dvf_code_commune ON dvf_transactions (code_commune);
 CREATE INDEX IF NOT EXISTS idx_dvf_date_mutation ON dvf_transactions (date_mutation);
@@ -199,10 +165,6 @@ CREATE INDEX IF NOT EXISTS idx_dvf_id_mutation ON dvf_transactions (id_mutation)
 
 -- B-tree price_trends
 CREATE INDEX IF NOT EXISTS idx_price_trends_commune ON price_trends (code_commune);
-
--- B-tree cadastre
-CREATE INDEX IF NOT EXISTS idx_parcelles_code_commune ON parcelles_cadastrales (code_commune);
-CREATE INDEX IF NOT EXISTS idx_parcelles_section ON parcelles_cadastrales (section);
 
 -- B-tree IRIS
 CREATE INDEX IF NOT EXISTS idx_iris_code_commune ON iris_quartiers (code_commune);
@@ -214,7 +176,6 @@ CREATE INDEX IF NOT EXISTS idx_departements_geom ON departements USING GIST (geo
 CREATE INDEX IF NOT EXISTS idx_communes_geom ON communes USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_communes_geom_simplified ON communes USING GIST (geom_simplified);
 CREATE INDEX IF NOT EXISTS idx_dvf_geom ON dvf_transactions USING GIST (geom);
-CREATE INDEX IF NOT EXISTS idx_parcelles_geom ON parcelles_cadastrales USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_iris_geom ON iris_quartiers USING GIST (geom);
 
 -- Recherche par nom (tri-gram pour LIKE/ILIKE performant)
