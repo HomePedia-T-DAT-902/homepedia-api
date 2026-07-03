@@ -43,8 +43,7 @@ _ENDPOINTS = [
 def _load_commune_codes() -> list[str]:
     if not COMMUNES_CSV.exists():
         raise FileNotFoundError(
-            f"[Risques/Geopoints] Fichier communes introuvable : {COMMUNES_CSV}\n"
-            "Lancez d'abord la source 'geo'."
+            f"[Risques/Geopoints] Fichier communes introuvable : {COMMUNES_CSV}\n" "Lancez d'abord la source 'geo'."
         )
     codes = []
     with open(COMMUNES_CSV, encoding="utf-8") as f:
@@ -83,12 +82,14 @@ def _fetch_commune(code_commune: str) -> list[dict]:
                 lat = item.get("latitude")
                 if lon is None or lat is None:
                     continue
-                points.append({
-                    "type_risque": type_risque,
-                    "longitude": float(lon),
-                    "latitude": float(lat),
-                    "code_commune": code_commune,
-                })
+                points.append(
+                    {
+                        "type_risque": type_risque,
+                        "longitude": float(lon),
+                        "latitude": float(lat),
+                        "code_commune": code_commune,
+                    }
+                )
 
             total_pages = payload.get("total_pages", 0)
             if page >= total_pages:
@@ -122,7 +123,9 @@ def run(raw_dir: Path = RAW_DIR, force: bool = False) -> None:
                 time.sleep(PAUSE_BETWEEN_BATCHES)
                 batch_count = 0
             if done % 1000 == 0:
-                logger.info(f"[Risques/Geopoints] {done:,} / {len(codes):,} communes — {len(all_points):,} points collectés")
+                logger.info(
+                    f"[Risques/Geopoints] {done:,} / {len(codes):,} communes — {len(all_points):,} points collectés"
+                )
 
     with open(dest, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=GEOPOINTS_COLUMNS)
