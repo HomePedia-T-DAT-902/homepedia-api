@@ -22,6 +22,45 @@ class CommuneRisques(BaseModel):
     source_annee: int | None = None
 
 
+class RisqueGeopoint(BaseModel):
+    id: int
+    type_risque: str
+    longitude: float
+    latitude: float
+    code_commune: str | None = None
+
+
+@router.get("/geopoints", response_model=list[RisqueGeopoint])
+async def get_risques_geopoints(
+    type_risque: str | None = Query(None, description="Filtrer par type de risque (ex: seisme, inondation)"),
+    code_commune: str | None = Query(None, description="Filtrer par code commune"),
+    limit: int = Query(100, ge=1, le=5000),
+    db: AsyncSession = Depends(get_db),
+):
+    """Geopoints des risques naturels et technologiques (centroïde de la commune à risque)."""
+    filters = []
+    params: dict = {"limit": limit}
+
+    if type_risque is not None:
+        filters.append("type_risque = :type_risque")
+        params["type_risque"] = type_risque
+    if code_commune is not None:
+        filters.append("code_commune = :code_commune")
+        params["code_commune"] = code_commune
+
+    where = ("WHERE " + " AND ".join(filters)) if filters else ""
+    result = await db.execute(
+        text(f"""
+            SELECT id, type_risque, longitude, latitude, code_commune
+            FROM risques_geopoints
+            {where}
+            LIMIT :limit
+        """),
+        params,
+    )
+    return [RisqueGeopoint(**row) for row in result.mappings().all()]
+
+
 @router.get("/{code_commune}", response_model=CommuneRisques)
 async def get_risques(code_commune: str, db: AsyncSession = Depends(get_db)):
     """Risques naturels et technologiques d'une commune (source Géorisques)."""

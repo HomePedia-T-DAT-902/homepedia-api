@@ -237,6 +237,17 @@ CREATE TABLE IF NOT EXISTS commune_risques (
     source_annee              INTEGER
 );
 
+CREATE TABLE IF NOT EXISTS risques_geopoints (
+    id           SERIAL PRIMARY KEY,
+    type_risque  VARCHAR(50) NOT NULL,
+    longitude    DOUBLE PRECISION NOT NULL,
+    latitude     DOUBLE PRECISION NOT NULL,
+    code_commune VARCHAR(5) REFERENCES communes(code_commune)
+);
+
+CREATE INDEX IF NOT EXISTS idx_risques_geopoints_type    ON risques_geopoints (type_risque);
+CREATE INDEX IF NOT EXISTS idx_risques_geopoints_commune ON risques_geopoints (code_commune);
+
 -- =============================================================================
 -- Qualité de l'air — Indice ATMO annuel (ATMO France / data.gouv.fr)
 -- =============================================================================

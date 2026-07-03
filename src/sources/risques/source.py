@@ -7,7 +7,7 @@ from pathlib import Path
 import psycopg2
 
 from src.sources.base import DataSource
-from src.sources.risques import config, download, load, preprocess, process
+from src.sources.risques import config, download, download_geopoints, load, preprocess, process
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,7 @@ class RisquesSource(DataSource):
     def download(self) -> None:
         logger.info("=== [Risques] Download ===")
         download.run(self.raw_dir)
+        download_geopoints.run(self.raw_dir)
 
     def preprocess(self) -> None:
         logger.info("=== [Risques] Preprocess ===")
@@ -42,6 +43,6 @@ class RisquesSource(DataSource):
             password=os.environ.get("POSTGRES_PASSWORD", "homepedia_secret"),
         )
         try:
-            load.run(conn, self.processed_dir)
+            load.run(conn, self.processed_dir, self.raw_dir)
         finally:
             conn.close()
