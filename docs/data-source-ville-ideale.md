@@ -130,16 +130,19 @@ Le site considère les résultats fiables à partir de **100 avis minimum** par 
 
 ## Stratégie de scraping recommandée
 
-### Architecture
+### Architecture (implémentation réelle)
+
+La source vit dans [`src/sources/ville_ideale/`](../src/sources/ville_ideale/) et suit
+l'interface `DataSource` (download → preprocess → process → load). Le scraping utilise Scrapy :
 
 ```
-src/scraping/
-  ville_ideale/
-    spiders/
-      cities_spider.py      # Liste des villes par département
-      reviews_spider.py      # Avis et notes par ville
-    items.py                 # Définition des items Scrapy
-    pipelines.py             # Pipeline PostgreSQL (JSONB)
+src/sources/ville_ideale/
+  source.py                  # VilleIdealeSource(DataSource)
+  download.py preprocess.py process.py load.py
+  on_demand.py               # Récupération d'une commune à la demande (utilisée par l'API)
+  scraper/
+    spiders/reviews_spider.py  # Spider Scrapy — avis et notes par ville
+    items.py middlewares.py pipelines.py settings.py
 ```
 
 ### Données à extraire
@@ -208,31 +211,31 @@ src/scraping/
 
 ### Valeur ajoutée unique
 
-ville-ideale.fr est la **seule source de données subjectives** du projet. Toutes les autres sources (DVF, DPE, INSEE, etc.) sont des données objectives/quantitatives. Les avis apportent :
+ville-ideale.fr est la **seule source de données subjectives** du projet. Toutes les autres sources (DVF, BPE, criminalité, etc.) sont des données objectives/quantitatives. Les avis apportent :
 
 - **Le ressenti des habitants** — complémentaire aux statistiques officielles
 - **Des notes par critère** — permettent un scoring multi-dimensionnel de la qualité de vie
-- **Du texte libre** — exploitable en NLP (analyse de sentiment avec spaCy/CamemBERT, word clouds)
+- **Du texte libre** — exploité pour générer un word cloud par commune
 
 ### Croisements possibles avec les données officielles
 
 | Critère ville-ideale | Source officielle à croiser | Analyse |
 |----------------------|---------------------------|---------|
-| Sécurité (ressenti) | Bases délinquance SSMSI | Corrélation ressenti vs statistiques réelles |
-| Transports (ressenti) | BPE / transport.data.gouv.fr | Satisfaction vs offre de transport |
-| Santé (ressenti) | RPPS / densité médicale | Satisfaction vs densité de médecins |
-| Environnement (ressenti) | DPE / qualité de l'eau | Perception vs mesures objectives |
-| Commerces (ressenti) | BPE (catégories commerces) | Satisfaction vs nombre d'équipements |
-| Enseignement (ressenti) | DNB / IVAL | Satisfaction vs résultats scolaires |
+| Sécurité (ressenti) | Délinquance SSMSI (`securite`) | Corrélation ressenti vs statistiques réelles |
+| Santé / Commerces (ressenti) | BPE (`equipements`) | Satisfaction vs nombre d'équipements |
+| Enseignement (ressenti) | IVAL bac (`education`) | Satisfaction vs résultats scolaires |
+| Environnement (ressenti) | Indice ATMO (`qualite_air`) / Géorisques (`risques`) | Perception vs mesures objectives |
 
-### Traitement NLP prévu
+### Traitement du texte (implémenté)
 
-| Analyse | Outil | Sortie |
-|---------|-------|--------|
-| Analyse de sentiment | spaCy (fr_core_news_md) / CamemBERT | Score positif/négatif par avis |
-| Extraction de thèmes | spaCy NER + règles | Thèmes récurrents par ville |
-| Word clouds | wordcloud (Python) | Nuages de mots par ville (stockés en JSONB) |
-| Résumé automatique | CamemBERT | Synthèse des points positifs/négatifs |
+Le traitement des avis est volontairement **léger et sans dépendance externe** (bibliothèque
+standard uniquement), réalisé dans [`process.py`](../src/sources/ville_ideale/process.py) :
+
+- Tokenisation des points positifs / négatifs
+- Suppression des stop-words français
+- Comptage de fréquence → **word cloud** par commune, stocké en JSONB dans `city_reviews`
+
+> Pas d'analyse de sentiment ni de modèle NLP (spaCy / CamemBERT) : hors périmètre.
 
 ---
 
