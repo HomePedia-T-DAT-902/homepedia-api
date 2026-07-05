@@ -32,6 +32,7 @@ class RisqueGeopoint(BaseModel):
 
 @router.get("/geopoints", response_model=list[RisqueGeopoint])
 async def get_risques_geopoints(
+    bbox: str | None = Query(None, description="min_lon,min_lat,max_lon,max_lat"),
     type_risque: str | None = Query(None, description="Filtrer par type de risque (ex: seisme, inondation)"),
     code_commune: str | None = Query(None, description="Filtrer par code commune"),
     limit: int = Query(100, ge=1, le=5000),
@@ -41,6 +42,16 @@ async def get_risques_geopoints(
     filters = []
     params: dict = {"limit": limit}
 
+    if bbox is not None:
+        try:
+            min_lon, min_lat, max_lon, max_lat = [float(x) for x in bbox.split(",")]
+        except ValueError:
+            raise HTTPException(
+                status_code=400, detail="bbox invalide — format attendu : min_lon,min_lat,max_lon,max_lat"
+            )
+        filters.append("latitude BETWEEN :min_lat AND :max_lat")
+        filters.append("longitude BETWEEN :min_lon AND :max_lon")
+        params.update({"min_lat": min_lat, "max_lat": max_lat, "min_lon": min_lon, "max_lon": max_lon})
     if type_risque is not None:
         filters.append("type_risque = :type_risque")
         params["type_risque"] = type_risque

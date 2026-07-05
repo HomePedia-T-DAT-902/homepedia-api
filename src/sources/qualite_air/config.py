@@ -8,7 +8,7 @@ PROCESSED_DIR = Path("data/processed/qualite_air")
 RAW_FILE = "commune_qualite_air.csv"
 
 # Dataset data.gouv.fr : Indice ATMO France
-ATMO_DATASET_ID = "63e7fdc2df4f62671f4e9f8b"
+ATMO_DATASET_ID = "6149925a2ff0ab6cebdd6fe8"
 
 # Mapping libellé qualité → colonne cible (ordre croissant de pollution)
 QUALIF_COLUMN_MAP = {

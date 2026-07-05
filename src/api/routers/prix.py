@@ -22,7 +22,7 @@ async def get_prix_points(
     bbox: str = Query(..., description="min_lon,min_lat,max_lon,max_lat"),
     annee: int | None = Query(None, description="Filtrer par année"),
     type_local: str | None = Query(None, description="Filtrer par type : Appartement, Maison"),
-    limit: int = Query(5000, ge=1, le=20000),
+    limit: int | None = Query(None, ge=1, description="Nombre max de points — illimité si absent"),
     db: AsyncSession = Depends(get_db),
 ):
     """Points DVF agrégés par coordonnées et année — prix/m² moyen et nb transactions."""
@@ -42,7 +42,6 @@ async def get_prix_points(
         "max_lat": max_lat,
         "min_lon": min_lon,
         "max_lon": max_lon,
-        "limit": limit,
     }
 
     if annee:
@@ -51,6 +50,11 @@ async def get_prix_points(
     if type_local:
         filters += " AND type_local = :type_local"
         params["type_local"] = type_local
+
+    limit_clause = ""
+    if limit is not None:
+        limit_clause = "LIMIT :limit"
+        params["limit"] = limit
 
     result = await db.execute(
         text(f"""
@@ -62,7 +66,7 @@ async def get_prix_points(
             FROM dvf_transactions
             {filters}
             GROUP BY latitude, longitude
-            LIMIT :limit
+            {limit_clause}
         """),
         params,
     )
