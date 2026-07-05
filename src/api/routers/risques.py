@@ -46,7 +46,9 @@ async def get_risques_geopoints(
         try:
             min_lon, min_lat, max_lon, max_lat = [float(x) for x in bbox.split(",")]
         except ValueError:
-            raise HTTPException(status_code=400, detail="bbox invalide — format attendu : min_lon,min_lat,max_lon,max_lat")
+            raise HTTPException(
+                status_code=400, detail="bbox invalide — format attendu : min_lon,min_lat,max_lon,max_lat"
+            )
         filters.append("latitude BETWEEN :min_lat AND :max_lat")
         filters.append("longitude BETWEEN :min_lon AND :max_lon")
         params.update({"min_lat": min_lat, "max_lat": max_lat, "min_lon": min_lon, "max_lon": max_lon})
