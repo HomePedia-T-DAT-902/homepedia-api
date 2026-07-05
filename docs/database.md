@@ -1,5 +1,10 @@
 # Base de données Homepedia — Description des tables
 
+Toutes les tables ci-dessous sont créées automatiquement par
+[`src/database/postgres_schema.sql`](../src/database/postgres_schema.sql) au premier
+démarrage de PostgreSQL — **sauf `city_reviews`**, créée à la volée par le loader
+`ville_ideale` et le router `reviews` (voir plus bas).
+
 ## Tables de référence géographique
 
 ### `regions`
@@ -191,6 +196,20 @@ Risques naturels et technologiques par commune (API Géorisques).
 
 ---
 
+### `risques_geopoints`
+Points géolocalisés par type de risque (centroïde de la commune exposée) — pour l'affichage cartographique.
+
+| Colonne | Type | Description |
+|---|---|---|
+| `id` | SERIAL | PK auto-incrémenté |
+| `type_risque` | VARCHAR(50) | Type de risque (inondation, seisme, feu_foret…) |
+| `longitude` / `latitude` | DOUBLE PRECISION | Coordonnées du point |
+| `code_commune` | VARCHAR(5) | FK → communes |
+
+**Usage API** : `GET /api/v1/risques/geopoints?bbox=...&type_risque=...`
+
+---
+
 ### `commune_qualite_air`
 Indice ATMO annuel par commune (ATMO France).
 
@@ -212,6 +231,8 @@ Indice ATMO annuel par commune (ATMO France).
 
 ### `city_reviews`
 Avis citoyens sur les communes (ville-ideale.fr) — chargement à la demande.
+**Non présente dans `postgres_schema.sql`** : la table est créée idempotemment (`CREATE TABLE IF NOT EXISTS`)
+par le loader `ville_ideale` et par le router `reviews` lors du premier scraping.
 
 | Colonne | Type | Description |
 |---|---|---|

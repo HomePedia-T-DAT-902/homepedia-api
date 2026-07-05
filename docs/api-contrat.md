@@ -1,281 +1,118 @@
 # Contrat API
 
 > **Source de vérité pour l'interface backend ↔ frontend.**
-> Pour le contexte global de l'architecture, voir [architecture.md](architecture.md).
+> Reflète les routers réellement montés dans [`src/api/main.py`](../src/api/main.py).
+> Le schéma complet et interactif est toujours disponible sur `http://localhost:8000/docs`.
 
 ---
 
 ## Règles générales
 
-- **Base URL** : `/api/v1` — tous les endpoints sont préfixés par ce chemin.
-- **Format** : toutes les réponses sont en **JSON** (`Content-Type: application/json`).
-- **Règle stricte** : le frontend ne doit **JAMAIS** utiliser un champ non défini dans ce contrat. Si un champ manque, l'ajouter au schéma Pydantic d'abord.
-- **Communication microservices** : le frontend (`homepedia-front`) appelle l'API via la variable d'env `VITE_API_URL`. En production, le reverse proxy Nginx route `/api/` vers le backend.
-
-```typescript
-// src/api/client.ts (repo homepedia-front)
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-// Dev : VITE_API_URL=http://localhost:8000
-// Prod : VITE_API_URL=https://api.homepedia.fr (ou routé via Nginx)
-```
+- **Préfixe** : tous les endpoints métier sont sous `/api/v1`. `GET /health` est le seul hors préfixe.
+- **Format** : réponses **JSON** (`Content-Type: application/json`).
+- **CORS** : ouvert (`allow_origins=["*"]`) — le frontend appelle l'API via `VITE_API_URL`.
+- Le frontend ne doit **jamais** consommer un champ non listé ici : l'ajouter d'abord au schéma Pydantic.
 
 ---
 
 ## Tableau des endpoints
 
-| Endpoint | Méthode | Response | Cache | Params |
-|----------|---------|----------|-------|--------|
-| `/api/v1/communes/search` | GET | `list[CommuneSearch]` | 1h | `q` (string, min 2 chars) |
-| `/api/v1/communes/{code}` | GET | `CommuneDetail` | 1h | — |
-| `/api/v1/communes/regions` | GET | `list[RegionItem]` | 24h | — |
-| `/api/v1/communes/departments` | GET | `list[DepartementItem]` | 24h | `region` (code_region) |
-| `/api/v1/prices/{code_commune}` | GET | `PriceStats` | 6h | `period`, `type` |
-| `/api/v1/prices/trends/{code_dept}` | GET | `list[PriceTrend]` | 6h | — |
-| `/api/v1/stats/{code_commune}` | GET | `CommuneStats` | 6h | — |
-| `/api/v1/geo/communes` | GET | `GeoJSON FeatureCollection` | 24h | `bbox` |
-| `/api/v1/geo/departments` | GET | `GeoJSON FeatureCollection` | 24h | — |
-| `/api/v1/geo/parcelles` | GET | `GeoJSON FeatureCollection` | 24h | `bbox` (requis), `limit` (max 10000) |
-| `/api/v1/geo/choropleth` | GET | `ChoroplethData` | 6h | `indicator`, `level` |
-| `/api/v1/reviews/{code_commune}` | GET | `ReviewSummary` | 6h | — |
-| `/api/v1/geo/transactions` | GET | `GeoJSON FeatureCollection` | 6h | `bbox`, `type`, `annee` |
-| `/api/v1/geo/rpls` | GET | `GeoJSON FeatureCollection` | 24h | `bbox` |
+| Endpoint | Méthode | Response | Params |
+|----------|---------|----------|--------|
+| `/health` | GET | `{ "status": "ok" }` | — |
+| `/api/v1/communes/search` | GET | `list[CommuneSearch]` | `q` (requis, ≥ 2 car.), `limit` (1-100, défaut 20) |
+| `/api/v1/communes/regions` | GET | `list[RegionItem]` | — |
+| `/api/v1/communes/departments` | GET | `list[DepartementItem]` | `region` (code_region, optionnel) |
+| `/api/v1/communes/{code_commune}` | GET | `CommuneDetail` | — |
+| `/api/v1/geo/iris` | GET | `GeoJSONFeatureCollection` | `bbox`, `code_commune`, `limit` (1-50000, défaut 5000) |
+| `/api/v1/geo/communes/{code_commune}/iris` | GET | `GeoJSONFeatureCollection` | — |
+| `/api/v1/prix/points` | GET | `list[TransactionPoint]` | `bbox` (requis), `annee`, `type_local`, `limit` |
+| `/api/v1/reviews/{code_commune}` | GET | `ReviewSummary` | — (cache-first, scrape à la demande) |
+| `/api/v1/risques/geopoints` | GET | `list[RisqueGeopoint]` | `bbox`, `type_risque`, `code_commune`, `limit` (1-5000, défaut 100) |
+| `/api/v1/risques/{code_commune}` | GET | `CommuneRisques` | — |
+| `/api/v1/risques` | GET | `list[CommuneRisques]` | `inondation`, `seisme`, `feu_foret`, `radon`, `limit` (1-1000, défaut 100) |
+| `/api/v1/qualite-air/{code_commune}` | GET | `CommuneQualiteAir` | — |
+| `/api/v1/securite/{code_commune}` | GET | `CommuneSecurite` | — |
+| `/api/v1/education/{code_commune}` | GET | `CommuneEducation` | — |
+| `/api/v1/equipements/{code_commune}` | GET | `CommuneEquipements` | — |
+
+> Le paramètre `bbox` a toujours le format `min_lon,min_lat,max_lon,max_lat`.
 
 ---
 
 ## Schémas Pydantic
 
-### Communes
-
-**`schemas/commune.py`**
+### Communes — `schemas/commune.py`
 
 ```python
-class RegionItem(BaseModel):
-    code_region: str           # "84"
-    nom: str                   # "Auvergne-Rhône-Alpes"
-
-class DepartementItem(BaseModel):
-    code_departement: str      # "69"
-    nom: str                   # "Rhône"
-    code_region: str
-
 class CommuneSearch(BaseModel):
-    code_commune: str          # "69123"
-    nom: str                   # "Lyon"
-    code_postal: str | None
-    nom_departement: str
-    nom_region: str
+    code_commune: str
+    nom: str
+    code_postal: str | None = None
+    nom_departement: str | None = None
+    nom_region: str | None = None
 
 class CommuneDetail(CommuneSearch):
-    code_departement: str
+    code_departement: str | None = None
+    code_region: str | None = None
+    population: int | None = None
+    superficie: float | None = None
+    densite: float | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+
+class RegionItem(BaseModel):
     code_region: str
-    population: int | None
-    superficie: float | None
-    densite: float | None
-    latitude: float | None
-    longitude: float | None
-    prix_median_m2: float | None
-    nb_transactions_annee: int | None
-    revenu_median: float | None
-    taux_pauvrete: float | None
-    taux_chomage: float | None
-    classe_dpe_dominante: str | None
-    note_globale: float | None
-    nb_avis: int | None
-    zone_abc: str | None
-    loyer_median_m2: float | None
-    taux_vacance: float | None
-    nb_logements_sociaux: int | None
-```
-
-### Prix
-
-**`schemas/price.py`**
-
-```python
-class PriceRecord(BaseModel):
-    date_mutation: date
-    valeur_fonciere: float
-    type_local: str
-    surface_bati: float
-    nb_pieces: int | None
-    surface_terrain: float | None
-    prix_m2: float
-
-class PriceTrend(BaseModel):
-    annee: int
-    trimestre: int
-    type_local: str
-    prix_median_m2: float
-    nb_transactions: int
-    variation_annuelle_pct: float | None
-
-class PriceStats(BaseModel):
-    code_commune: str
-    prix_median_m2: float | None
-    prix_moyen_m2: float | None
-    nb_transactions_total: int
-    trends: list[PriceTrend]
-    distribution_type_local: dict[str, int]
-    prix_min_m2: float | None
-    prix_max_m2: float | None
-```
-
-### Statistiques
-
-**`schemas/stats.py`**
-
-```python
-class DpeDistribution(BaseModel):
-    classe_a: int
-    classe_b: int
-    classe_c: int
-    classe_d: int
-    classe_e: int
-    classe_f: int
-    classe_g: int
-    consommation_moyenne: float | None
-
-class EquipmentCounts(BaseModel):
-    nb_ecoles: int
-    nb_colleges: int
-    nb_lycees: int
-    nb_medecins: int
-    nb_dentistes: int
-    nb_pharmacies: int
-    nb_hopitaux: int
-    nb_gares: int
-    nb_supermarches: int
-    nb_total: int
-
-class CriminalityStats(BaseModel):
-    annee: int
-    # ... 15 indicateurs ...
-    total_faits: int
-    population: int | None
-    taux_pour_mille: float | None
-
-class LoyerStats(BaseModel):
-    loyer_m2_appartement: float | None
-    loyer_m2_maison: float | None
-    loyer_m2_app_3p: float | None
-    loyer_m2_app_12p: float | None
-
-class VacanceStats(BaseModel):
-    annee: int
-    nb_logements_total: int
-    nb_vacants: int
-    nb_vacants_longue_duree: int
-    taux_vacance: float
-
-class ZonageABC(BaseModel):
-    zone: str
-    reclassement: bool
-
-class RplsStats(BaseModel):
-    nb_logements_sociaux: int
-    surface_moyenne: float | None
-    repartition_financement: dict[str, int]
-    repartition_dpe: dict[str, int] | None
-
-class CommuneStats(BaseModel):
-    code_commune: str
-    revenu_median: float | None
-    taux_pauvrete: float | None
-    taux_chomage: float | None
-    population: int | None
-    dpe: DpeDistribution | None
-    equipements: EquipmentCounts | None
-    criminalite: list[CriminalityStats]
-    loyers: LoyerStats | None
-    rpls: RplsStats | None
-    vacance: list[VacanceStats]
-    zonage_abc: ZonageABC | None
-```
-
-### Géo
-
-**`schemas/geo.py`**
-
-```python
-class BBox(BaseModel):
-    min_lon: float
-    min_lat: float
-    max_lon: float
-    max_lat: float
-
-class ChoroplethItem(BaseModel):
-    code: str
     nom: str
-    valeur: float
 
-class ChoroplethData(BaseModel):
-    indicator: str
-    level: str
-    items: list[ChoroplethItem]
-    geojson: dict[str, Any]
+class DepartementItem(BaseModel):
+    code_departement: str
+    nom: str
+    code_region: str | None = None
 ```
 
-### Parcelles cadastrales
-
-**`GET /api/v1/geo/parcelles`** — retourne un `GeoJSON FeatureCollection`
-
-**Params** :
-- `bbox` (requis) : `min_lon,min_lat,max_lon,max_lat` — bounding box du viewport
-- `limit` (optionnel, défaut 5000, max 10000) — nombre max de parcelles
-
-**Response** : `GeoJSON FeatureCollection` avec les propriétés suivantes par feature :
+### Géo (IRIS) — `schemas/geo.py`
 
 ```python
-class ParcelleProperties(BaseModel):
-    id: str                    # "75101000AB0002" — identifiant parcelle
-    code_commune: str          # "75101" — code INSEE commune/arrondissement
-    section: str | None        # "AB" — section cadastrale
-    numero: str | None         # "2" — numéro de parcelle
-    contenance: int | None     # 45688 — surface en m²
+class GeoJSONFeature(BaseModel):
+    type: str = "Feature"
+    properties: dict[str, Any]
+    geometry: dict[str, Any]
+
+class GeoJSONFeatureCollection(BaseModel):
+    type: str = "FeatureCollection"
+    code_commune: str | None = None
+    truncated: bool | None = None
+    count: int
+    features: list[GeoJSONFeature]
 ```
 
-**Geometry** : `Polygon` (EPSG:4326)
-
-**Exemple** :
-
-```json
-{
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "id": "75101000AB0002",
-        "code_commune": "75101",
-        "section": "AB",
-        "numero": "2",
-        "contenance": 45688
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[[2.331, 48.860], [2.332, 48.860], ...]]
-      }
-    }
-  ]
-}
-```
-
-> **Note** : ne requêter les parcelles que quand le zoom est suffisant (zoom >= 15), sinon le volume de données est trop important.
-
-### Avis
-
-**`schemas/reviews.py`**
+### Prix (DVF) — `routers/prix.py`
 
 ```python
-class ReviewRatings(BaseModel):
+class TransactionPoint(BaseModel):
+    latitude: float
+    longitude: float
+    prix_m2_moyen: float
+    nb_transactions: int
+```
+
+Les points DVF sont agrégés par coordonnées (`GROUP BY latitude, longitude`) : `prix_m2_moyen`
+est la moyenne du prix/m² et `nb_transactions` le nombre de ventes au même point.
+
+### Avis — `routers/reviews.py`
+
+```python
+class ReviewRatings(BaseModel):   # notes 0-10, 9 critères ville-ideale.fr
     environnement: float | None
     transports: float | None
     securite: float | None
     sante: float | None
     sports_loisirs: float | None
     culture: float | None
-    education: float | None
+    enseignement: float | None
     commerces: float | None
+    qualite_vie: float | None
 
 class WordCloudEntry(BaseModel):
     mot: str
@@ -283,62 +120,111 @@ class WordCloudEntry(BaseModel):
 
 class ReviewSummary(BaseModel):
     code_commune: str
-    note_globale: float | None
+    note_globale: float | None = None
     nb_avis: int
-    ratings: ReviewRatings | None
-    word_cloud: list[WordCloudEntry]
+    ratings: ReviewRatings | None = None
+    word_cloud: list[WordCloudEntry] = []
 ```
 
-### Commun
-
-**`schemas/pagination.py`**
+### Risques — `routers/risques.py`
 
 ```python
-class PaginatedResponse(BaseModel, Generic[T]):
-    items: list[T]
-    total: int
-    page: int
-    page_size: int
-    has_next: bool
+class CommuneRisques(BaseModel):
+    code_commune: str
+    inondation: bool | None
+    seisme: bool | None
+    mouvement_terrain: bool | None
+    retrait_gonflement_argile: bool | None
+    radon: bool | None
+    feu_foret: bool | None
+    icpe: bool | None
+    source_annee: int | None
+
+class RisqueGeopoint(BaseModel):
+    id: int
+    type_risque: str
+    longitude: float
+    latitude: float
+    code_commune: str | None = None
 ```
 
-**`schemas/errors.py`**
+### Qualité de l'air — `routers/qualite_air.py`
 
 ```python
-class ErrorDetail(BaseModel):
-    code: str        # "COMMUNE_NOT_FOUND"
-    message: str
+class CommuneQualiteAir(BaseModel):
+    code_commune: str
+    annee: int | None
+    indice_atmo: float | None
+    nb_jours_bon: int | None
+    nb_jours_moyen: int | None
+    nb_jours_degrade: int | None
+    nb_jours_mauvais: int | None
+    nb_jours_tres_mauvais: int | None
+    nb_jours_extremement_mauvais: int | None
+```
+
+### Sécurité — `routers/securite.py`
+
+```python
+class SecuriteAnnee(BaseModel):
+    annee: int
+    cambriolages_nombre: int | None
+    cambriolages_pour_mille: float | None
+    violences_nombre: int | None
+    violences_pour_mille: float | None
+    vols_nombre: int | None
+    vols_pour_mille: float | None
+    stups_nombre: int | None
+    stups_pour_mille: float | None
+    destructions_nombre: int | None
+    destructions_pour_mille: float | None
+
+class CommuneSecurite(BaseModel):
+    code_commune: str
+    historique: list[SecuriteAnnee]   # une entrée par année disponible
+```
+
+### Éducation — `routers/education.py`
+
+```python
+class EducationAnnee(BaseModel):
+    annee: int
+    bac_presents: int | None
+    bac_taux_reussite: float | None
+
+class CommuneEducation(BaseModel):
+    code_commune: str
+    historique: list[EducationAnnee]
+```
+
+### Équipements (BPE) — `routers/bpe.py`
+
+```python
+class CommuneEquipements(BaseModel):
+    code_commune: str
+    nb_equipements_total: int | None
+    nb_maternelles: int | None
+    nb_primaires: int | None
+    nb_creches: int | None
+    nb_colleges: int | None
+    nb_lycees: int | None
+    nb_medecins: int | None
+    nb_pharmacies: int | None
+    nb_urgences: int | None
+    nb_supermarches: int | None
+    nb_hypermarches: int | None
+    nb_gares: int | None
 ```
 
 ---
 
 ## Gestion d'erreurs
 
-Format de réponse d'erreur :
+FastAPI renvoie les erreurs au format `{ "detail": "..." }`.
 
-```json
-{ "code": "COMMUNE_NOT_FOUND", "message": "Commune 99999 introuvable" }
-```
-
-| Code HTTP | Code erreur | Quand |
-|-----------|-------------|-------|
-| 400 | `INVALID_BBOX` | bbox mal formée |
-| 400 | `INVALID_INDICATOR` | indicateur choropleth inconnu |
-| 404 | `COMMUNE_NOT_FOUND` | code_commune inexistant |
-| 404 | `DEPARTMENT_NOT_FOUND` | code_departement inexistant |
-| 422 | (FastAPI auto) | Validation Pydantic échouée |
-
----
-
-## Correspondance vues ↔ endpoints
-
-| Vue | Déclencheur | Endpoints API | Carte |
-|-----|-------------|---------------|-------|
-| **NationalView** | `viewLevel=national` | `/geo/departments`, `/geo/choropleth` | Choropleth départements |
-| **RegionView** | `viewLevel=region` | `/geo/choropleth`, `/prices/trends/{dept}` | Zoom région, depts colorés |
-| **DepartementView** | `viewLevel=departement` | `/geo/communes?bbox=`, `/prices/trends/{dept}` | Zoom dept, bubble map communes |
-| **CommuneView** | `viewLevel=commune` | `/communes/{code}`, `/prices/{code}`, `/stats/{code}`, `/reviews/{code}`, `/geo/transactions?bbox=`, `/geo/rpls?bbox=`, `/geo/parcelles?bbox=` | Zoom commune, parcelles + points cliquables |
-| **TendancesView** | `viewMode=tendances` | `/prices/{code}` (x N communes) | — |
-| **ComparaisonView** | `viewMode=comparaison` | `/communes/{code}` + `/stats/{code}` (x 2-4) | — |
-| **EnergieView** | `viewMode=energie` | `/geo/choropleth?indicator=classe_dpe` | Heatmap DPE |
-| **AvisView** | `viewMode=avis` | `/reviews/{code}`, `/geo/choropleth?indicator=note_globale` | Choropleth notes |
+| Code HTTP | Quand |
+|-----------|-------|
+| 400 | `bbox` mal formée (`/prix/points`, `/risques/geopoints`) |
+| 404 | Ressource introuvable (commune sans donnée pour la thématique demandée) |
+| 422 | Validation Pydantic échouée (paramètre manquant / hors bornes) |
+| 503 | `/reviews/{code}` — ville-ideale.fr momentanément rate-limité et aucune copie en cache |
